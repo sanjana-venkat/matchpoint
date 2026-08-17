@@ -351,6 +351,6 @@ private struct GroupChatComposer: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }

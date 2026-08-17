@@ -131,7 +131,7 @@ struct ChallengeComposerView: View {
                 ToolbarItem(placement: .topBarTrailing) { CloseIconButton { dismiss() } }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear { sport = app.activeSport }
         .sheet(isPresented: $showUnratedWarning) {
             UnratedInviteConfirmationSheet(name: player.name, sport: sport ?? app.activeSport) {
@@ -204,7 +204,7 @@ struct UnratedInviteConfirmationSheet: View {
         }
         .padding(DesignSystem.Metrics.screenPadding)
         .background(Theme.bg)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -236,7 +236,7 @@ struct EditChallengesSheet: View {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -376,7 +376,7 @@ struct ScoreUpdateSheet: View {
                 .background(Theme.bg)
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var matchSummary: some View {
@@ -580,7 +580,7 @@ struct FaceOffComposerView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }
 
@@ -646,7 +646,7 @@ struct ReportResultView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var explanation: String {
@@ -747,7 +747,7 @@ struct LogGameSheet: View {
                     .background(Theme.bg)
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
             sport = app.mySports.contains(app.activeSport) ? app.activeSport : app.mySports.first
 #if DEBUG

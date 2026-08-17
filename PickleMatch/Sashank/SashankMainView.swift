@@ -55,7 +55,7 @@ struct SashankMainView: View {
             }
         }
         .foregroundStyle(MP.ink)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
 #if DEBUG
             let args = ProcessInfo.processInfo.arguments
@@ -90,6 +90,8 @@ struct SashankMainView: View {
                 .shadow(color: MP.shadow, radius: 8, y: 2)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Switch sport. Current sport: \(app.activeSport.title)")
+            .accessibilityHint("Shows your available sports")
 
             Spacer()
 
@@ -99,7 +101,7 @@ struct SashankMainView: View {
                         .font(.system(size: 19, weight: .semibold))
                     Text("4")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(MP.black)
                         .frame(width: 21, height: 21)
                         .background(MP.accent(app.activeSport), in: Circle())
                 }
@@ -109,6 +111,7 @@ struct SashankMainView: View {
                 .shadow(color: MP.shadow, radius: 8, y: 2)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Notifications, 4 unread")
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -144,51 +147,43 @@ struct SashankMainView: View {
     }
 
     private var nativeNav: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 4) {
             navItem(.map, "map")
             navItem(.matches, app.activeSport.category == .group ? "calendar" : "checkmark.rectangle")
-            Button { tab = .home; fabOpen = false } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: "house")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(tab == .home ? .white : MP.ink3)
-                        .frame(width: 58, height: 58)
-                        .background(tab == .home ? MP.accent(app.activeSport) : MP.surface2, in: Circle())
-                        .shadow(color: tab == .home ? MP.accent(app.activeSport).opacity(0.22) : .clear, radius: 10, y: 4)
-                    Text("Home")
-                }
-                .font(.system(size: 10.5, weight: .bold))
-                .foregroundStyle(tab == .home ? MP.accent(app.activeSport) : MP.ink3)
-                .offset(y: -16)
-            }
-            .frame(maxWidth: .infinity)
+            navItem(.home, "house")
             navItem(.chats, "person.2")
             navItem(.profile, "person")
         }
-        .frame(height: 84)
-        .padding(.horizontal, 8)
-        .background(MP.black, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.14), lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.13), radius: 24, y: 10)
+        .frame(height: 68)
+        .padding(.horizontal, 10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 25, style: .continuous))
+        .background(Color.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 25).stroke(MP.line, lineWidth: 1))
+        .shadow(color: MP.shadow, radius: 18, y: 7)
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
     }
 
     private func navItem(_ item: Tab, _ icon: String) -> some View {
         Button { tab = item; fabOpen = false } label: {
-            VStack(spacing: 5) {
-                Capsule()
-                    .fill(tab == item ? MP.accent(app.activeSport) : .clear)
-                    .frame(width: 20, height: 3)
-                Image(systemName: icon).font(.system(size: 21, weight: .medium))
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 19, weight: .semibold))
+                    .frame(width: 36, height: 30)
+                    .background(tab == item ? MP.soft(app.activeSport) : .clear, in: RoundedRectangle(cornerRadius: 10))
                 Text(item == .matches && app.activeSport.category == .group ? "Calendar" : item.rawValue)
-                    .font(.system(size: 10.5, weight: .semibold))
+                    .font(.system(size: 10, weight: tab == item ? .bold : .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(tab == item ? MP.accent(app.activeSport) : MP.ink3)
+            .foregroundStyle(tab == item ? MP.accentText(app.activeSport) : MP.ink3)
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 52)
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+        .accessibilityLabel(item == .matches && app.activeSport.category == .group ? "Calendar" : item.rawValue)
+        .accessibilityAddTraits(tab == item ? .isSelected : [])
     }
 
     private var fab: some View {
@@ -206,14 +201,15 @@ struct SashankMainView: View {
                 Image(systemName: fabOpen ? "xmark" : "plus")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 58, height: 58)
+                    .frame(width: 54, height: 54)
                     .background(MP.black, in: Circle())
                     .shadow(color: Color.black.opacity(0.22), radius: 14, y: 7)
             }
         }
         .padding(.trailing, 20)
-        .padding(.bottom, 106)
+        .padding(.bottom, 90)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .accessibilityLabel(fabOpen ? "Close quick actions" : "Open quick actions")
     }
 
     private func fabOption(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
@@ -222,28 +218,28 @@ struct SashankMainView: View {
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
-                .frame(height: 42)
+                .frame(height: 44)
                 .background(MP.black, in: Capsule())
         }
     }
 }
 
 private enum MP {
-    static let background = Color(hex: "151515")
-    static let surface = Color(hex: "1C1C1C")
-    static let surface2 = Color(hex: "252525")
-    static let surface3 = Color(hex: "353535")
-    static let line = Color.white.opacity(0.20)
-    static let strongLine = Color.white.opacity(0.78)
-    static let ink = Color(hex: "F7F7F3")
-    static let ink2 = Color(hex: "D3D3CF")
-    static let ink3 = Color(hex: "92928E")
-    static let ink4 = Color(hex: "686865")
-    static let black = Color(hex: "050505")
+    static let background = Color(hex: "F3F3F0")
+    static let surface = Color(hex: "FFFFFF")
+    static let surface2 = Color(hex: "ECEDE8")
+    static let surface3 = Color(hex: "E1E2DC")
+    static let line = Color(hex: "D4D5CF")
+    static let strongLine = Color(hex: "B8BAB3")
+    static let ink = Color(hex: "171815")
+    static let ink2 = Color(hex: "444640")
+    static let ink3 = Color(hex: "676A62")
+    static let ink4 = Color(hex: "85887F")
+    static let black = Color(hex: "171815")
     static let danger = Color(hex: "F35332")
     static let orange = Color(hex: "F35332")
     static let lime = Color(hex: "8BC653")
-    static let shadow = Color.black.opacity(0.32)
+    static let shadow = Color.black.opacity(0.10)
 
     static func display(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
         .custom("Avenir Next Condensed", size: size).weight(weight)
@@ -265,6 +261,11 @@ private enum MP {
     }
 
     static func soft(_ sport: Sport) -> Color { accent(sport).opacity(0.18) }
+
+    static func accentText(_ sport: Sport) -> Color {
+        sport == .pickleball || sport == .pingPong || sport == .soccer || sport == .tennis || sport == .baseball
+            ? Color(hex: "477A19") : Color(hex: "B83218")
+    }
 }
 
 private struct MPAssetSportIcon: View {
@@ -347,26 +348,29 @@ private struct NativeHomeScreen: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
-            ZStack(alignment: .bottomLeading) {
+            ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
                     .fill(MP.surface2)
-                Circle().fill(MP.accent(app.activeSport)).frame(width: 170, height: 170).offset(x: 196, y: 92)
-                MPAssetSportIcon(sport: app.activeSport, size: 108).opacity(0.12).offset(x: 230, y: -84)
-                AvatarView(avatar: app.me.avatar, size: 228)
-                    .offset(x: 86, y: 26)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(app.activeSport.category == .individual ? "MP RATING" : "PEER RATED")
-                        .font(.system(size: 10, weight: .heavy)).tracking(1)
-                    Text(app.activeSport.category == .individual ? "\(app.currentRating)" : "4.8")
-                        .font(MP.display(38, weight: .bold))
-                    Text(app.activeSport.category == .individual ? "Ready for your next match." : "Ready for your next fixture.")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(MP.ink2)
-                        .frame(width: 125, alignment: .leading)
+                Circle().fill(MP.accent(app.activeSport).opacity(0.88)).frame(width: 150, height: 150).offset(x: 145, y: 90)
+                MPAssetSportIcon(sport: app.activeSport, size: 94).opacity(0.09).offset(x: 120, y: -70)
+                HStack(alignment: .center, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(app.activeSport.category == .individual ? "MP RATING" : "PEER RATED")
+                            .font(.system(size: 10, weight: .heavy)).tracking(1)
+                        Text(app.activeSport.category == .individual ? "\(app.currentRating)" : "4.8")
+                            .font(MP.display(38, weight: .bold))
+                        Text(app.activeSport.category == .individual ? "Ready for your next match." : "Ready for your next fixture.")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(MP.ink2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(width: 118, alignment: .leading)
+                    Spacer(minLength: 0)
+                    AvatarView(avatar: app.me.avatar, size: 184)
                 }
-                .padding(20)
+                .padding(.horizontal, 18)
             }
-            .frame(height: 246)
+            .frame(height: 224)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 28).stroke(MP.strongLine, lineWidth: 1))
         }
@@ -450,7 +454,7 @@ private struct PersonPoster: View {
                 Text(line1).font(.system(size: 12)).foregroundStyle(MP.ink3).lineLimit(1)
                 Text(line2).font(.system(size: 12)).foregroundStyle(MP.ink3).lineLimit(1)
                 if let badge {
-                    Text(badge).font(.system(size: 11, weight: .bold)).foregroundStyle(badgeColor)
+                    Text(badge).font(.system(size: 11, weight: .bold)).foregroundStyle(MP.ink)
                         .padding(.horizontal, 10).frame(height: 27)
                         .background(badgeColor.opacity(0.11), in: Capsule()).padding(.top, 3)
                 }
@@ -494,7 +498,7 @@ private struct CommunityPoster: View {
                 LinearGradient(colors: [MP.soft(sport), MP.accent(sport).opacity(0.28)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 MPAssetSportIcon(sport: sport, size: 92).opacity(0.2).offset(x: 120, y: 28)
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(community.kind).font(.system(size: 10.5, weight: .bold)).foregroundStyle(MP.accent(sport))
+                    Text(community.kind).font(.system(size: 10.5, weight: .bold)).foregroundStyle(MP.accentText(sport))
                         .padding(.horizontal, 10).frame(height: 25).background(.white.opacity(0.94), in: Capsule())
                     Spacer()
                     HStack(spacing: 5) {
@@ -508,8 +512,8 @@ private struct CommunityPoster: View {
                 Text(community.name).font(.system(size: 15.5, weight: .bold)).lineLimit(1)
                 Text(community.meta).font(.system(size: 12)).foregroundStyle(MP.ink3).lineLimit(1)
                 Text(community.kind == "Facility" ? "View facility" : (community.kind == "Club" ? "Join community" : "Join league"))
-                    .font(.system(size: 12, weight: .bold)).foregroundStyle(MP.accent(sport))
-                    .frame(maxWidth: .infinity).frame(height: 38)
+                    .font(.system(size: 12, weight: .bold)).foregroundStyle(MP.accentText(sport))
+                    .frame(maxWidth: .infinity).frame(height: 44)
                     .background(MP.soft(sport), in: RoundedRectangle(cornerRadius: 13))
                     .overlay(RoundedRectangle(cornerRadius: 13).stroke(MP.accent(sport).opacity(0.22), lineWidth: 1))
             }
@@ -558,7 +562,7 @@ private struct NativeMapScreen: View {
                                     .overlay(Circle().stroke(.white, lineWidth: 3))
                                     .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
                                 Text("\(player.rating(app.activeSport))")
-                                    .font(.system(size: 9, weight: .bold)).foregroundStyle(MP.accent(app.activeSport))
+                                    .font(.system(size: 9, weight: .bold)).foregroundStyle(MP.accentText(app.activeSport))
                                     .padding(.horizontal, 5).frame(height: 15).background(.white, in: Capsule()).offset(y: 5)
                             }
                         }
@@ -577,12 +581,13 @@ private struct NativeMapScreen: View {
                 Menu {
                     ForEach(["Any rating", "Under 80", "80 to 110", "Above 110"], id: \.self) { value in Button(value) { rating = value } }
                 } label: { filterChip(rating == "Any rating" ? "Rating" : rating, icon: "bolt") }
-                if gender != nil || rating != "Any rating" {
-                    Button("Clear filters") { gender = nil; rating = "Any rating" }
-                        .font(.system(size: 12, weight: .semibold)).foregroundStyle(MP.ink2)
-                        .padding(.horizontal, 13).frame(height: 36).background(.white, in: Capsule())
-                }
-                Spacer(minLength: 0)
+                Button("Clear filters") { gender = nil; rating = "Any rating" }
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(gender == nil && rating == "Any rating" ? MP.ink3 : MP.ink)
+                    .lineLimit(1)
+                    .frame(width: 92, height: 44).background(.white, in: Capsule())
+                    .overlay(Capsule().stroke(MP.line, lineWidth: 1))
+                    .disabled(gender == nil && rating == "Any rating")
             }
             .padding(.horizontal, 14)
             .padding(.top, 10)
@@ -605,7 +610,8 @@ private struct NativeMapScreen: View {
             Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(MP.ink3)
         }
         .font(.system(size: 12, weight: .semibold)).foregroundStyle(MP.ink)
-        .padding(.horizontal, 13).frame(height: 36).background(.white, in: Capsule())
+        .lineLimit(1)
+        .padding(.horizontal, 11).frame(maxWidth: 112).frame(height: 44).background(.white, in: Capsule())
         .overlay(Capsule().stroke(MP.line, lineWidth: 1)).shadow(color: MP.shadow, radius: 4, y: 1)
     }
 }
@@ -671,7 +677,7 @@ private struct MPSegmented: View {
                 Button(option) { selection = option }
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(selection == option ? MP.black : MP.ink3)
-                    .frame(maxWidth: .infinity).frame(height: 38)
+                    .frame(maxWidth: .infinity).frame(height: 44)
                     .background(selection == option ? MP.lime : .clear, in: RoundedRectangle(cornerRadius: 11))
                     .shadow(color: selection == option ? MP.shadow : .clear, radius: 4, y: 1)
             }
@@ -753,7 +759,7 @@ private struct WeeklyCalendar: View {
 
 private extension View {
     func calendarNav(width: CGFloat = 34) -> some View {
-        self.foregroundStyle(MP.ink2).frame(width: width, height: 32)
+        self.foregroundStyle(MP.ink2).frame(width: max(width, 44), height: 44)
             .background(MP.surface2, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(MP.line, lineWidth: 1))
     }
 }
@@ -787,7 +793,7 @@ private struct PastMatchCard: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing) {
-                        Text(match.ratingDelta > 0 ? "+\(match.ratingDelta)" : "\(match.ratingDelta)").font(.system(size: 17, weight: .heavy)).foregroundStyle(match.didWin ? Color(hex: "4CA85F") : MP.danger)
+                        Text(match.ratingDelta > 0 ? "+\(match.ratingDelta)" : "\(match.ratingDelta)").font(.system(size: 17, weight: .heavy)).foregroundStyle(match.didWin ? Color(hex: "477A19") : Color(hex: "B83218"))
                         Text(match.date.formatted(date: .abbreviated, time: .omitted)).font(.system(size: 10)).foregroundStyle(MP.ink3)
                     }
                 }
@@ -814,7 +820,7 @@ private struct NativeMatchDetail: View {
             Capsule().fill(MP.line).frame(width: 42, height: 5)
             AvatarView(avatar: record.opponentAvatar, size: 72)
             Text(record.didWin ? "Win against \(record.opponentName)" : "Loss to \(record.opponentName)").font(.system(size: 21, weight: .bold))
-            Text(record.didWin ? "11–8, 11–6" : "8–11, 9–11").font(.system(size: 26, weight: .heavy)).foregroundStyle(record.didWin ? Color(hex: "4CA85F") : MP.danger)
+            Text(record.didWin ? "11–8, 11–6" : "8–11, 9–11").font(.system(size: 26, weight: .heavy)).foregroundStyle(record.didWin ? Color(hex: "477A19") : Color(hex: "B83218"))
             Text("\(record.date.formatted(date: .long, time: .omitted)) · \(record.venue)").font(.system(size: 13)).foregroundStyle(MP.ink3)
             Spacer()
         }
@@ -946,7 +952,7 @@ private struct NativeChatScreen: View {
             }
             .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(MP.surface)
         }
-        .foregroundStyle(MP.ink).preferredColorScheme(.dark)
+        .foregroundStyle(MP.ink).preferredColorScheme(.light)
     }
 
     private func messageText(_ message: ChatMessage) -> String {
@@ -982,7 +988,7 @@ private struct NativeProfileScreen: View {
                                     HStack(spacing: 5) { MPAssetSportIcon(sport: sport, size: 15); Text(sport.title) }
                                         .font(.system(size: 12, weight: .bold))
                                         .foregroundStyle(app.activeSport == sport ? Color.black : Color.black.opacity(0.55))
-                                        .padding(.horizontal, 12).frame(height: 36)
+                                        .padding(.horizontal, 12).frame(height: 44)
                                         .background(app.activeSport == sport ? MP.accent(sport) : Color.black.opacity(0.06), in: Capsule())
                                         .overlay(Capsule().stroke(Color.black.opacity(0.12)))
                                 }
@@ -998,7 +1004,7 @@ private struct NativeProfileScreen: View {
                 MPSectionHeader(title: "\(app.activeSport.title) statistics")
                 HStack(spacing: 10) {
                     statistic("\(app.myMatches.count)", app.activeSport.category == .group ? "Fixtures" : "Matches")
-                    statistic("\(app.wins)", "Wins", color: MP.accent(app.activeSport))
+                    statistic("\(app.wins)", "Wins", color: MP.accentText(app.activeSport))
                     statistic("\(Int(app.winPct))%", "Win rate")
                 }
                 if profile?.usesElo == true { ratingTrend }
@@ -1029,13 +1035,13 @@ private struct NativeProfileScreen: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("MP RATING").font(.system(size: 10.5, weight: .heavy)).tracking(1).foregroundStyle(MP.ink3)
-                            Text(profile?.usesElo == true ? "\(profile?.rating ?? 80)" : "Unrated").font(.system(size: 40, weight: .heavy)).foregroundStyle(MP.accent(app.activeSport))
+                            Text(profile?.usesElo == true ? "\(profile?.rating ?? 80)" : "Unrated").font(.system(size: 40, weight: .heavy)).foregroundStyle(MP.accentText(app.activeSport))
                             Text("Everyone starts at 80 and moves in small steps.").font(.system(size: 12)).foregroundStyle(MP.ink3)
                         }
                         Spacer(); MPAssetSportIcon(sport: app.activeSport, size: 50).opacity(0.6)
                     }
                     Divider().overlay(MP.line)
-                    Text("How the MP Rating works").font(.system(size: 13, weight: .bold)).foregroundStyle(MP.accent(app.activeSport))
+                    Text("How the MP Rating works").font(.system(size: 13, weight: .bold)).foregroundStyle(MP.accentText(app.activeSport))
                 }
             }
         }
@@ -1090,7 +1096,7 @@ private struct NativeProfileScreen: View {
     }
 
     private func stars(_ value: Double) -> some View {
-        HStack(spacing: 2) { ForEach(1...5, id: \.self) { index in Image(systemName: Double(index) <= value.rounded() ? "star.fill" : "star").font(.system(size: 10)).foregroundStyle(MP.accent(app.activeSport)) } }
+        HStack(spacing: 2) { ForEach(1...5, id: \.self) { index in Image(systemName: Double(index) <= value.rounded() ? "star.fill" : "star").font(.system(size: 10)).foregroundStyle(MP.accentText(app.activeSport)) } }
     }
 }
 
@@ -1124,7 +1130,7 @@ private struct NativeNotificationsSheet: View {
             }
             Spacer()
         }
-        .padding(20).background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
+        .padding(20).background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.light)
     }
 }
 
@@ -1170,12 +1176,12 @@ private struct NativeChallengeSheet: View {
                 .padding(.horizontal, 20)
             }
         }
-        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
+        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.light)
     }
 
     private func fieldLabel(_ value: String) -> some View { Text(value.uppercased()).font(.system(size: 11, weight: .heavy)).tracking(0.8).foregroundStyle(MP.ink3) }
     private func choice(_ value: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(value).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.accent(app.activeSport) : MP.ink2).padding(.horizontal, 12).frame(height: 38).background(selected ? MP.soft(app.activeSport) : MP.surface, in: Capsule()).overlay(Capsule().stroke(selected ? MP.accent(app.activeSport) : MP.line)) }
+        Button(action: action) { Text(value).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.accentText(app.activeSport) : MP.ink2).padding(.horizontal, 12).frame(height: 44).background(selected ? MP.soft(app.activeSport) : MP.surface, in: Capsule()).overlay(Capsule().stroke(selected ? MP.accent(app.activeSport) : MP.line)) }
     }
 }
 
@@ -1218,12 +1224,12 @@ private struct NativeScoreSheet: View {
                 .padding(.horizontal, 20).padding(.bottom, 28)
             }
         }
-        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
+        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.light)
     }
 
     private func winner(_ index: Int) -> Int { winners.indices.contains(index) ? winners[index] : 0 }
     private func setWinner(_ value: Int, _ index: Int) { while winners.count <= index { winners.append(0) }; winners[index] = value }
     private func winnerButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? .white : MP.ink2).frame(maxWidth: .infinity).frame(height: 40).background(selected ? MP.accent(app.activeSport) : MP.surface2, in: RoundedRectangle(cornerRadius: 12)) }
+        Button(action: action) { Text(title).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.black : MP.ink2).frame(maxWidth: .infinity).frame(height: 44).background(selected ? MP.accent(app.activeSport) : MP.surface2, in: RoundedRectangle(cornerRadius: 12)) }
     }
 }

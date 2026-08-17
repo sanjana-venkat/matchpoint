@@ -70,7 +70,7 @@ struct OnboardingFlowView: View {
             )
         }
         .animation(.easeInOut(duration: 0.18), value: step)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var currentAccent: Color {

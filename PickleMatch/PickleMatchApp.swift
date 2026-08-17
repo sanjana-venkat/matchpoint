@@ -9,7 +9,7 @@ struct PickleMatchApp: App {
             RootView()
                 .environmentObject(app)
                 .tint(app.themeColor)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }
@@ -95,7 +95,7 @@ private struct PrototypeStateChooser: View {
             }
             .padding(24)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private func prototypeButton(title: String, detail: String, icon: String, established: Bool) -> some View {

@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// Scoreline: a near-monochrome, typography-led athletic system.
+/// Scoreline: a light, near-monochrome, typography-led athletic system.
 enum Scoreline {
-    static let ink = Color(hex: "0B0D12")
-    static let surface = Color(hex: "151923")
-    static let surface2 = Color(hex: "202633")
-    static let hairline = Color.white.opacity(0.09)
-    static let textPrimary = Color(hex: "F2F1EE")
-    static let textSecondary = Color(hex: "AAA7A5")
-    static let signal = Color(hex: "35D6B4")
-    static let socialTeal = Color(hex: "55AFC0")
+    static let ink = Color(hex: "F3F3F0")
+    static let surface = Color(hex: "FFFFFF")
+    static let surface2 = Color(hex: "E8E9E3")
+    static let hairline = Color.black.opacity(0.12)
+    static let textPrimary = Color(hex: "171815")
+    static let textSecondary = Color(hex: "62655D")
+    static let signal = Color(hex: "D83B20")
+    static let socialTeal = Color(hex: "2D6E78")
 }
 
 enum DesignSystem {
@@ -32,7 +32,7 @@ enum DesignSystem {
         static let pillRadius: CGFloat = 12
         static let screenPadding: CGFloat = 20
         static let verticalRhythm: CGFloat = 16
-        static let standardShadow = Color.black.opacity(0.30)
+        static let standardShadow = Color.black.opacity(0.10)
     }
 
     enum TypeScale {

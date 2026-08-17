@@ -36,7 +36,7 @@ struct LiveMatchView: View {
                 resultView
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .task {
             guard phase == .countdown else { return }
             for value in stride(from: 3, through: 1, by: -1) {

@@ -559,7 +559,7 @@ private struct HeadToHeadHistoryView: View {
             .background(Theme.bg)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private func historyFilter(_ title: String, sport: Sport?) -> some View {
@@ -676,7 +676,7 @@ private struct WagerAgreementSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
             if let currentProposal, currentProposal.state != .noWager {
                 if WagerHint.all.contains(currentProposal.value) {

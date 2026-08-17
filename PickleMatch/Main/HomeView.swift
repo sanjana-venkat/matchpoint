@@ -799,6 +799,6 @@ private struct PeerRatingSheet: View {
             .background(Theme.bg)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 }

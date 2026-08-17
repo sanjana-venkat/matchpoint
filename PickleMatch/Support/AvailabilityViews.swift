@@ -619,7 +619,7 @@ struct AvailabilityCoordinationSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear { mySlots = app.me.availability }
         .onChange(of: mySlots) { _, updated in
             app.updateMyAvailability(updated)
@@ -779,7 +779,7 @@ struct MatchTimeProposalSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .sheet(isPresented: $showUnratedWarning) {
             UnratedInviteConfirmationSheet(name: playerName, sport: app.activeSport) {
                 sendProposal()
@@ -848,7 +848,7 @@ struct ProfileAvailabilitySheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear { slots = app.me.availability }
     }
 }
