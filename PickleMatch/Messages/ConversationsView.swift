@@ -19,6 +19,8 @@ struct ConversationsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    SorbetSectionTitle(title: "Messages", kicker: "Friends & requests", color: app.themeColor)
+
                     MinimalChoiceBar(
                         options: InboxSection.allCases.map(\.title),
                         selection: Binding(
@@ -57,7 +59,6 @@ struct ConversationsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
-                ToolbarItem(placement: .principal) { Text("Chats").font(Theme.heading(17)) }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showGroupComposer = true

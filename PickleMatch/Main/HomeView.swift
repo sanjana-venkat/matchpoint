@@ -34,23 +34,27 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(spacing: 24) {
+                LazyVStack(spacing: 28) {
                     hero
-                    verificationShelf
-                    connectionRequestShelf
+                    if let faceOff = app.scoreUpdatesNeeded.first {
+                        scoreUpdateCard(faceOff)
+                    }
                     if !app.upcomingFaceOffs.isEmpty {
                         upcomingMatches
                     }
                     playerShelf(
-                        title: app.activeSport.category == .individual ? "Recommended opponents" : "Players in your area",
+                        title: "For you",
                         players: forYou,
-                        color: app.themeColor,
+                        color: Theme.pink,
                         style: .featured
                     )
+
+                    topScorersLeaderboard
+
                     playerShelf(
-                        title: "\(app.activeSport.title) near you",
+                        title: "Most frequently played",
                         players: mostPlayed,
-                        color: app.themeColor,
+                        color: Theme.grape,
                         style: .compact,
                         showsGameCount: true
                     )
@@ -61,29 +65,6 @@ struct HomeView: View {
             .background(Theme.canvas)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
-                ToolbarItem(placement: .principal) {
-                    Text("Home").font(Theme.heading(17))
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {} label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bell")
-                                .font(.system(size: 18, weight: .semibold))
-                            Text("4")
-                                .font(Theme.ui(10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 21, height: 21)
-                                .background(app.themeColor, in: Circle())
-                        }
-                        .foregroundStyle(Theme.ink)
-                        .padding(.horizontal, 10)
-                        .frame(height: 44)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Notifications, 4 unread")
-                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .sorbetScreen()
@@ -169,105 +150,17 @@ struct HomeView: View {
     }
 
     private var hero: some View {
-        VStack(spacing: 2) {
-            Text(greeting)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Ready, \(firstName).")
                 .font(Theme.heading(27))
-                .tracking(-0.7)
-                .multilineTextAlignment(.center)
-            Text(heroSubtitle)
-                .font(Theme.ui(13))
-                .foregroundStyle(Theme.muted)
-            ZStack {
-                Circle().fill(app.themeColor.opacity(0.18)).frame(width: 250, height: 250)
-                Circle().fill(app.themeColor.opacity(0.68)).frame(width: 68, height: 68).offset(x: -112, y: -58)
-                Circle().fill(app.themeColor.opacity(0.42)).frame(width: 52, height: 52).offset(x: 112, y: -86)
-                SportIcon(sport: app.activeSport, size: 56).opacity(0.16).offset(x: 115, y: 75)
-                AvatarView(avatar: app.me.avatar, size: 218)
-                    .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 6))
-                    .shadow(color: app.themeColor.opacity(0.16), radius: 18, y: 8)
-            }
-            .frame(height: 278)
+                .tracking(-0.6)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 18)
-    }
-
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: .now)
-        let salutation = hour < 12 ? "Good Morning" : (hour < 17 ? "Good Afternoon" : "Good Evening")
-        return "\(salutation), \(firstName)!"
-    }
-
-    private var heroSubtitle: String {
-        guard let profile = app.me.profile(app.activeSport) else { return app.activeSport.title }
-        return profile.usesElo
-            ? "\(app.activeSport.title) · MP Rating \(profile.rating)"
-            : "\(app.activeSport.title) · Peer rated by your squad"
     }
 
     private var firstName: String {
         app.me.name.split(separator: " ").first.map(String.init) ?? "player"
-    }
-
-    private var verificationShelf: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            homeSectionHeader("Verifications", action: "3 waiting")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(Array(availablePlayers.prefix(3).enumerated()), id: \.element.id) { index, player in
-                        Button { selectedPlayer = player } label: {
-                            HomeActionPoster(
-                                player: player,
-                                sport: app.activeSport,
-                                detail: index.isMultiple(of: 2) ? "Singles · 2–1 games" : "Doubles · 1–2 games",
-                                footnote: Date.now.addingTimeInterval(TimeInterval(-(index + 1) * 86_400)).formatted(date: .abbreviated, time: .omitted),
-                                badge: "Verify",
-                                badgeColor: Theme.neonOrange
-                            )
-                        }
-                        .buttonStyle(SorbetScaleButtonStyle())
-                    }
-                }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 8)
-            }
-        }
-    }
-
-    private var connectionRequestShelf: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            homeSectionHeader("Connection requests", action: "See all")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(Array(availablePlayers.dropFirst(3).prefix(4))) { player in
-                        Button { selectedPlayer = player } label: {
-                            HomeActionPoster(
-                                player: player,
-                                sport: app.activeSport,
-                                detail: "\(String(format: "%.1f", player.distanceMiles)) miles away",
-                                footnote: "Recently active",
-                                badge: "Wants to connect",
-                                badgeColor: app.themeColor
-                            )
-                        }
-                        .buttonStyle(SorbetScaleButtonStyle())
-                    }
-                }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 8)
-            }
-        }
-    }
-
-    private func homeSectionHeader(_ title: String, action: String? = nil) -> some View {
-        HStack {
-            Text(title).font(Theme.heading(20))
-            Spacer()
-            if let action {
-                Text(action).font(Theme.ui(12, weight: .bold)).foregroundStyle(app.themeColor)
-            }
-        }
-        .padding(.horizontal, 18)
     }
 
     private var quickMatchHub: some View {
@@ -480,7 +373,10 @@ struct HomeView: View {
         showsGameCount: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 11) {
-            homeSectionHeader(title, action: title.contains("Recommended") ? "Open map" : nil)
+            Text(title)
+                .font(Theme.heading(19))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 18)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 15) {
@@ -592,88 +488,62 @@ struct HomePlayerCard: View {
     var badge: String?
     var contextLine: String?
 
-    private var width: CGFloat { style == .featured ? 172 : 184 }
-    private var imageSize: CGFloat { style == .featured ? 112 : 104 }
+    private var width: CGFloat { style == .featured ? 244 : 190 }
+    private var imageSize: CGFloat { style == .featured ? 78 : 62 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack {
-                LinearGradient(colors: [accent.opacity(0.16), .white], startPoint: .topLeading, endPoint: .bottomTrailing)
-                SportIcon(sport: sport, size: 82).opacity(0.14).offset(x: 54, y: 34)
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .top) {
                 AvatarView(avatar: player.avatar, size: imageSize)
+                Spacer()
+                if let badge {
+                    Text(badge)
+                        .font(Theme.ui(10, weight: .bold))
+                        .foregroundStyle(Theme.muted)
+                        .padding(.horizontal, 9)
+                        .frame(height: 30)
+                        .background(Theme.faint, in: RoundedRectangle(cornerRadius: 10))
+                } else if player.profile(sport) != nil, sport.category == .group {
+                    Label("Peer rated", systemImage: "star.fill")
+                        .font(Theme.ui(9, weight: .bold))
+                        .foregroundStyle(Theme.color(for: sport))
+                        .padding(8)
+                        .background(Theme.color(for: sport).opacity(0.12), in: RoundedRectangle(cornerRadius: 11))
+                } else if player.profile(sport)?.usesElo == false {
+                    Text(player.profile(sport)?.socialSkillLabel?.rawValue ?? "Social play")
+                        .font(Theme.ui(9, weight: .bold))
+                        .foregroundStyle(Theme.color(for: sport))
+                }
             }
-            .frame(height: 124)
-            .frame(maxWidth: .infinity)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(player.name)
-                    .font(Theme.heading(16))
+                    .font(Theme.heading(style == .featured ? 19 : 16))
                     .foregroundStyle(Theme.ink)
                     .lineLimit(1)
                 Text("\(player.distanceMiles, specifier: "%.1f") mi · \(player.city)")
-                    .font(Theme.ui(12))
+                    .font(Theme.ui(11, weight: .bold))
                     .foregroundStyle(Theme.muted)
                     .lineLimit(1)
 
                 if let profile = player.profile(sport), profile.usesElo {
-                    Text("\(player.rating(sport))")
-                        .font(Theme.ui(11, weight: .bold))
-                        .foregroundStyle(accent)
-                        .padding(.horizontal, 9)
-                        .frame(height: 25)
-                        .background(accent.opacity(0.12), in: Capsule())
-                }
-                if let badge {
-                    Text(badge).font(Theme.ui(10, weight: .bold)).foregroundStyle(Theme.muted)
+                    Text("\(player.rating(sport)) rating · \(EloRating.tier(for: player.rating(sport)))")
+                        .font(Theme.ui(10, weight: .bold))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(1)
                 }
             }
-            .padding(13)
-        }
-        .frame(width: width, height: 242, alignment: .topLeading)
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
-        .shadow(color: Color(hex: "141A2C").opacity(0.07), radius: 8, y: 3)
-    }
-}
 
-private struct HomeActionPoster: View {
-    let player: Player
-    let sport: Sport
-    let detail: String
-    let footnote: String
-    let badge: String
-    let badgeColor: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack {
-                LinearGradient(colors: [Theme.color(for: sport).opacity(0.14), .white], startPoint: .topLeading, endPoint: .bottomTrailing)
-                SportIcon(sport: sport, size: 86).opacity(0.12).offset(x: 52, y: 35)
-                AvatarView(avatar: player.avatar, size: 112)
+            if let contextLine {
+                Text(contextLine)
+                    .font(Theme.ui(11))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(style == .featured ? 2 : 1)
+                    .multilineTextAlignment(.leading)
             }
-            .frame(height: 124)
-            .frame(maxWidth: .infinity)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(player.name).font(Theme.heading(16)).lineLimit(1)
-                Text(detail).font(Theme.ui(12)).foregroundStyle(Theme.muted).lineLimit(1)
-                Text(footnote).font(Theme.ui(12)).foregroundStyle(Theme.muted).lineLimit(1)
-                Text(badge)
-                    .font(Theme.ui(11, weight: .bold))
-                    .foregroundStyle(badgeColor)
-                    .padding(.horizontal, 10)
-                    .frame(height: 27)
-                    .background(badgeColor.opacity(0.11), in: Capsule())
-                    .padding(.top, 3)
-            }
-            .padding(13)
         }
-        .frame(width: 172, height: 258, alignment: .topLeading)
-        .background(Theme.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
-        .shadow(color: Color(hex: "141A2C").opacity(0.07), radius: 8, y: 3)
+        .frame(width: width, height: style == .featured ? 216 : 176, alignment: .topLeading)
+        .card(padding: 14)
     }
 }
 
