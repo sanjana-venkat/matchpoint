@@ -72,11 +72,39 @@ struct SportIcon: View {
     var isSelected = false
     var color = Theme.ink
 
+    @ViewBuilder
     var body: some View {
-        SportGlyphShape(sport: sport)
-            .stroke(color, style: StrokeStyle(lineWidth: isSelected ? 2 : 1.5, lineCap: .round, lineJoin: .round))
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
+        if let assetName {
+            Image(assetName)
+                .renderingMode(.original)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
+        } else {
+            SportGlyphShape(sport: sport)
+                .stroke(
+                    color,
+                    style: StrokeStyle(
+                        lineWidth: isSelected ? 2 : 1.5,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var assetName: String? {
+        switch sport {
+        case .pickleball: return "sport_pickleball"
+        case .badminton: return "sport_badminton"
+        case .cricket: return "sport_cricket"
+        case .tennis: return "sport_tennis"
+        case .soccer: return "sport_soccer"
+        default: return nil
+        }
     }
 }
 
