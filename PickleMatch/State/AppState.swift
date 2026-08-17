@@ -54,6 +54,9 @@ final class AppState: ObservableObject {
         }
 
 #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-demo-established") {
+            loadEstablishedPrototype()
+        }
         if ProcessInfo.processInfo.arguments.contains("-demo-main") {
             var demo = MockData.emptyMe()
             demo.name = "Alex"

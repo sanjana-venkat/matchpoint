@@ -9,7 +9,7 @@ struct PickleMatchApp: App {
             RootView()
                 .environmentObject(app)
                 .tint(app.themeColor)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }
@@ -18,7 +18,7 @@ struct PickleMatchApp: App {
 /// then shows the main tabbed experience.
 struct RootView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedPrototype = false
+    @State private var selectedPrototype = ProcessInfo.processInfo.arguments.contains("-demo-established")
 
     var body: some View {
         Group {
@@ -36,7 +36,7 @@ struct RootView: View {
                     ChatView(conversationId: conversation.id)
                 }
             } else if app.hasCompletedOnboarding {
-                MainTabView()
+                SashankMainView()
                     .transition(.opacity)
             } else {
                 OnboardingFlowView()
@@ -44,7 +44,7 @@ struct RootView: View {
             }
 #else
             if app.hasCompletedOnboarding {
-                MainTabView()
+                SashankMainView()
                     .transition(.opacity)
             } else {
                 OnboardingFlowView()
