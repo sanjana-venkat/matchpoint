@@ -28,6 +28,7 @@ struct MatchesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
+                ToolbarItem(placement: .principal) { Text("Matches").font(Theme.heading(17)) }
             }
             .sorbetScreen()
             .sheet(item: $selectedRecord) { record in

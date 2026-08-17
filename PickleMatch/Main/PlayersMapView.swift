@@ -121,11 +121,12 @@ struct PlayersMapView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
+                ToolbarItem(placement: .principal) { Text("Map").font(Theme.heading(17)) }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Theme.bg.opacity(0.92), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .sheet(item: $challengePlayer) { player in
                 ChallengeComposerView(player: player)
                     .presentationDetents([.large])

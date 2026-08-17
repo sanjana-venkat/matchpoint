@@ -16,7 +16,6 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    SorbetSectionTitle(title: "Your corner", kicker: "Player profile", color: Theme.pink)
                     profileSportTabs
                     identityCard
                     availabilityCard
@@ -32,6 +31,7 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
+                ToolbarItem(placement: .principal) { Text("Profile").font(Theme.heading(17)) }
             }
             .sorbetScreen()
             .sheet(isPresented: $showAddSport) { AddSportView() }

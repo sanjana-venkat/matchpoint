@@ -1,21 +1,23 @@
 import SwiftUI
 
-/// Scoreline: a near-monochrome, typography-led athletic system.
+/// Match Point's light pastel system, translated from Sashank's 8/17 prototype.
 enum Scoreline {
-    static let ink = Color(hex: "0B0D12")
-    static let surface = Color(hex: "151923")
-    static let surface2 = Color(hex: "202633")
-    static let hairline = Color.white.opacity(0.09)
-    static let textPrimary = Color(hex: "F2F1EE")
-    static let textSecondary = Color(hex: "AAA7A5")
-    static let signal = Color(hex: "35D6B4")
-    static let socialTeal = Color(hex: "55AFC0")
+    static let ink = Color(hex: "151821")
+    static let surface = Color.white
+    static let surface2 = Color(hex: "F4F6FA")
+    static let surface3 = Color(hex: "EBEEF4")
+    static let hairline = Color(hex: "E6E9F0")
+    static let textPrimary = ink
+    static let textSecondary = Color(hex: "858C9E")
+    static let signal = Color(hex: "4CA85F")
+    static let socialTeal = Color(hex: "3D82C4")
+    static let canvas = Color(hex: "F7F8FB")
 }
 
 enum DesignSystem {
     enum Palette {
-        static let appBackground = Scoreline.ink
-        static let canvas = Scoreline.ink
+        static let appBackground = Scoreline.canvas
+        static let canvas = Scoreline.canvas
         static let surfaceElevated = Scoreline.surface
         static let accent = Scoreline.textPrimary
         static let textPrimary = Scoreline.textPrimary
@@ -32,7 +34,7 @@ enum DesignSystem {
         static let pillRadius: CGFloat = 12
         static let screenPadding: CGFloat = 20
         static let verticalRhythm: CGFloat = 16
-        static let standardShadow = Color.black.opacity(0.30)
+        static let standardShadow = Color(hex: "141A2C").opacity(0.08)
     }
 
     enum TypeScale {
@@ -54,32 +56,45 @@ extension Color {
 
 /// Compatibility aliases keep feature code compiling while enforcing Scoreline.
 enum Theme {
-    static let bg = Scoreline.ink
-    static let canvas = Scoreline.ink
+    static let bg = Scoreline.canvas
+    static let canvas = Scoreline.canvas
     static let surface = Scoreline.surface
     static let surface2 = Scoreline.surface2
     static let ink = Scoreline.textPrimary
     static let muted = Scoreline.textSecondary
     static let hairline = Scoreline.hairline
-    static let faint = Scoreline.surface2
-    static let accent = Scoreline.textPrimary
+    static let faint = Scoreline.surface3
+    static let accent = Scoreline.signal
     static let signal = Scoreline.signal
     static let neonBlue = Scoreline.textSecondary
-    static let neonGreen = Scoreline.textPrimary
-    static let neonOrange = Scoreline.signal
-    static let neonRed = Scoreline.signal
-    static let mint = Scoreline.surface2
-    static let warm = Scoreline.surface
+    static let neonGreen = Color(hex: "4CA85F")
+    static let neonOrange = Color(hex: "D0762F")
+    static let neonRed = Color(hex: "CE5555")
+    static let mint = Color(hex: "EFF8F1")
+    static let warm = Color(hex: "FDF3E9")
 
     // Legacy semantic colors collapse into the monochrome system.
-    static let pink = Scoreline.signal
-    static let grape = Scoreline.textPrimary
-    static let blue = Scoreline.socialTeal
-    static let lime = Scoreline.textPrimary
-    static let badminton = Scoreline.textPrimary
+    static let pink = Color(hex: "CE5555")
+    static let grape = Color(hex: "7857BE")
+    static let blue = Color(hex: "3D82C4")
+    static let lime = Color(hex: "4CA85F")
+    static let badminton = Color(hex: "3D82C4")
 
-    static func color(for sport: Sport) -> Color { Scoreline.textPrimary }
-    static let cardCorner = DesignSystem.Metrics.cardRadius
+    static func color(for sport: Sport) -> Color {
+        switch sport {
+        case .pickleball: return Color(hex: "4CA85F")
+        case .badminton: return Color(hex: "3D82C4")
+        case .tennis: return Color(hex: "B58A27")
+        case .pingPong: return Color(hex: "D0762F")
+        case .squash: return Color(hex: "A45C9C")
+        case .volleyball: return Color(hex: "7857BE")
+        case .cricket: return Color(hex: "CE5555")
+        case .soccer: return Color(hex: "2F7A50")
+        case .baseball: return Color(hex: "536FA8")
+        case .football: return Color(hex: "9A6A43")
+        }
+    }
+    static let cardCorner: CGFloat = 22
 
     /// Condensed heavy italic is exclusive to ratings, scores, and statistics.
     static func display(_ size: CGFloat) -> Font {
@@ -109,7 +124,7 @@ extension View {
             .font(Theme.ui(15))
             .toolbarBackground(Theme.bg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
     }
 }
 
@@ -120,9 +135,10 @@ private struct SorbetCardModifier: ViewModifier {
         content
             .padding(padding)
             .background {
-                RoundedRectangle(cornerRadius: Theme.cardCorner)
+                RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
                     .fill(Theme.surface)
-                    .overlay(RoundedRectangle(cornerRadius: Theme.cardCorner).stroke(Theme.hairline, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
+                    .shadow(color: DesignSystem.Metrics.standardShadow, radius: 8, y: 2)
             }
     }
 }

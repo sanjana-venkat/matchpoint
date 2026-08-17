@@ -9,7 +9,7 @@ struct PickleMatchApp: App {
             RootView()
                 .environmentObject(app)
                 .tint(app.themeColor)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
         }
     }
 }
@@ -18,7 +18,7 @@ struct PickleMatchApp: App {
 /// then shows the main tabbed experience.
 struct RootView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedPrototype = false
+    @State private var selectedPrototype = ProcessInfo.processInfo.arguments.contains("-demo-established")
 
     var body: some View {
         Group {
@@ -95,7 +95,7 @@ private struct PrototypeStateChooser: View {
             }
             .padding(24)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private func prototypeButton(title: String, detail: String, icon: String, established: Bool) -> some View {

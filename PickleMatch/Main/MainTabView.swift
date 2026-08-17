@@ -67,33 +67,36 @@ struct MainTabView: View {
     }
 
     private var customTabBar: some View {
-        HStack(spacing: 4) {
-            tabButton(0, title: "Home", item: .home)
-            tabButton(1, title: "Maps", item: .map)
+        HStack(spacing: 2) {
+            tabButton(1, title: "Map", item: .map)
             tabButton(2, title: "Matches", item: .matches)
+            tabButton(0, title: "Home", item: .home)
             tabButton(3, title: "Chats", item: .chat)
             tabButton(4, title: "Profile", item: .profile)
         }
-        .padding(6)
-        .frame(height: 72)
-        .background(.ultraThinMaterial, in: Capsule())
-        .background(Color.black.opacity(0.42), in: Capsule())
-        .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
-        .shadow(color: Color.black.opacity(0.34), radius: 18, y: 8)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 9)
+        .padding(.horizontal, 8)
+        .frame(height: 82)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .background(Color.white.opacity(0.82), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 34, style: .continuous).stroke(Color.white.opacity(0.8), lineWidth: 1))
+        .shadow(color: Color(hex: "141A2C").opacity(0.13), radius: 24, y: 10)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 8)
     }
 
     private func tabButton(_ index: Int, title: String, item: AppNavigationItem) -> some View {
         let isSelected = selectedTab == index
         return Button { selectedTab = index } label: {
             VStack(spacing: 3) {
-                AppNavigationIcon(item: item, size: 20, color: isSelected ? Theme.bg : Theme.muted)
-                Text(title).font(Theme.ui(9, weight: .medium))
+                AppNavigationIcon(item: item, size: isSelected ? 24 : 21, color: isSelected ? .white : Color(hex: "A9B0BF"))
+                    .frame(width: isSelected ? 54 : 34, height: isSelected ? 54 : 34)
+                    .background(isSelected ? app.themeColor.opacity(0.96) : Color.clear, in: Circle())
+                    .shadow(color: isSelected ? app.themeColor.opacity(0.22) : .clear, radius: 10, y: 4)
+                Text(title).font(Theme.ui(10.5, weight: isSelected ? .bold : .semibold))
             }
-            .foregroundStyle(isSelected ? Theme.bg : Theme.muted)
+            .foregroundStyle(isSelected ? app.themeColor : Color(hex: "A9B0BF"))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(isSelected ? Theme.ink : Color.clear, in: Capsule())
+            .offset(y: isSelected ? -13 : 0)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -117,27 +120,27 @@ struct MainTabView: View {
             } label: {
                 Image(systemName: fabExpanded ? "xmark" : "plus")
                     .font(.system(size: 20, weight: .black))
-                    .foregroundStyle(Theme.bg)
-                    .frame(width: 58, height: 58)
-                    .background(Color.white, in: Circle())
-                    .shadow(color: Color.black.opacity(0.42), radius: 18, y: 8)
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color(hex: "14161C"), in: RoundedRectangle(cornerRadius: 19, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.22), radius: 18, y: 8)
             }
             .buttonStyle(SorbetScaleButtonStyle())
             .accessibilityLabel(fabExpanded ? "Close actions" : "Open quick actions")
         }
         .padding(.trailing, DesignSystem.Metrics.screenPadding)
-        .padding(.bottom, 86)
+        .padding(.bottom, 96)
     }
 
     private func fabOption(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
                 .font(Theme.ui(12, weight: .bold))
-                .foregroundStyle(Theme.bg)
+                .foregroundStyle(.white)
                 .padding(.horizontal, 15)
                 .frame(height: 44)
-                .background(Color.white, in: Capsule())
-                .shadow(color: Color.black.opacity(0.3), radius: 12, y: 5)
+                .background(Color(hex: "14161C"), in: Capsule())
+                .shadow(color: Color.black.opacity(0.18), radius: 12, y: 5)
         }
         .buttonStyle(SorbetScaleButtonStyle())
     }
@@ -154,17 +157,18 @@ struct SportModeToggle: View {
         Group {
             if app.hasMultipleSports {
                 Button { selectNextSport() } label: {
-                    HStack(spacing: 7) {
-                        SportIcon(sport: app.activeSport, size: 20)
-                        Text(app.activeSport.title).font(Theme.ui(14, weight: .bold))
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 10, weight: .semibold))
+                    HStack(spacing: 6) {
+                        SportIcon(sport: app.activeSport, size: 27)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Theme.muted)
                     }
                     .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 12)
-                    .frame(height: 38)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 13))
-                    .overlay(RoundedRectangle(cornerRadius: 13).stroke(Theme.hairline, lineWidth: 1))
+                    .padding(.horizontal, 11)
+                    .frame(height: 44)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
+                    .shadow(color: Color(hex: "141A2C").opacity(0.08), radius: 8, y: 2)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Switch sport. Current sport \(app.activeSport.title)")
