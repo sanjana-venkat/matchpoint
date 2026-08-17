@@ -55,7 +55,7 @@ struct SashankMainView: View {
             }
         }
         .foregroundStyle(MP.ink)
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
         .onAppear {
 #if DEBUG
             let args = ProcessInfo.processInfo.arguments
@@ -63,6 +63,8 @@ struct SashankMainView: View {
                 app.activeSport = .cricket
                 tab = .matches
             }
+            if args.contains("-demo-profile") { tab = .profile }
+            if args.contains("-demo-map") { tab = .map }
 #endif
         }
         .sheet(isPresented: $showNotifications) { NativeNotificationsSheet() }
@@ -75,20 +77,21 @@ struct SashankMainView: View {
             Button { withAnimation(.easeOut(duration: 0.16)) { showSports.toggle() } } label: {
                 HStack(spacing: 6) {
                     MPAssetSportIcon(sport: app.activeSport, size: 23)
+                    Text(app.activeSport.title)
+                        .font(.system(size: 12, weight: .bold))
                     Image(systemName: "chevron.down")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(MP.ink3)
                 }
-                .frame(minWidth: 64, minHeight: 44)
+                .padding(.horizontal, 13)
+                .frame(minHeight: 44)
                 .background(MP.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 15).stroke(MP.line, lineWidth: 1))
                 .shadow(color: MP.shadow, radius: 8, y: 2)
             }
             .buttonStyle(.plain)
 
-            Text(title)
-                .font(.system(size: 17, weight: .bold))
-                .frame(maxWidth: .infinity)
+            Spacer()
 
             Button { showNotifications = true } label: {
                 HStack(spacing: 6) {
@@ -133,7 +136,7 @@ struct SashankMainView: View {
             }
         }
         .padding(6).frame(width: 230)
-        .background(.white, in: RoundedRectangle(cornerRadius: 20))
+        .background(MP.surface, in: RoundedRectangle(cornerRadius: 20))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(MP.line))
         .shadow(color: Color.black.opacity(0.16), radius: 22, y: 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -164,9 +167,8 @@ struct SashankMainView: View {
         }
         .frame(height: 84)
         .padding(.horizontal, 8)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
-        .background(Color.white.opacity(0.88), in: RoundedRectangle(cornerRadius: 34, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 34).stroke(Color.white.opacity(0.9), lineWidth: 1))
+        .background(MP.black, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.14), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.13), radius: 24, y: 10)
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
@@ -186,6 +188,7 @@ struct SashankMainView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 
     private var fab: some View {
@@ -226,62 +229,53 @@ struct SashankMainView: View {
 }
 
 private enum MP {
-    static let background = Color(hex: "F7F8FB")
-    static let surface = Color.white
-    static let surface2 = Color(hex: "F4F6FA")
-    static let surface3 = Color(hex: "EBEEF4")
-    static let line = Color(hex: "E6E9F0")
-    static let ink = Color(hex: "151821")
-    static let ink2 = Color(hex: "565D70")
-    static let ink3 = Color(hex: "858C9E")
-    static let ink4 = Color(hex: "A9B0BF")
-    static let black = Color(hex: "14161C")
-    static let danger = Color(hex: "CE5555")
-    static let orange = Color(hex: "D0762F")
-    static let shadow = Color(hex: "141A2C").opacity(0.07)
+    static let background = Color(hex: "151515")
+    static let surface = Color(hex: "1C1C1C")
+    static let surface2 = Color(hex: "252525")
+    static let surface3 = Color(hex: "353535")
+    static let line = Color.white.opacity(0.20)
+    static let strongLine = Color.white.opacity(0.78)
+    static let ink = Color(hex: "F7F7F3")
+    static let ink2 = Color(hex: "D3D3CF")
+    static let ink3 = Color(hex: "92928E")
+    static let ink4 = Color(hex: "686865")
+    static let black = Color(hex: "050505")
+    static let danger = Color(hex: "F35332")
+    static let orange = Color(hex: "F35332")
+    static let lime = Color(hex: "8BC653")
+    static let shadow = Color.black.opacity(0.32)
+
+    static func display(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        .custom("Avenir Next Condensed", size: size).weight(weight)
+    }
 
     static func accent(_ sport: Sport) -> Color {
         switch sport {
-        case .pickleball: Color(hex: "4CA85F")
-        case .badminton: Color(hex: "3D82C4")
-        case .pingPong: Color(hex: "D0762F")
-        case .cricket: Color(hex: "CE5555")
-        case .soccer: Color(hex: "2F7A50")
-        case .volleyball: Color(hex: "7857BE")
-        case .tennis: Color(hex: "B58A27")
-        case .squash: Color(hex: "A45C9C")
-        case .baseball: Color(hex: "536FA8")
-        case .football: Color(hex: "9A6A43")
+        case .pickleball: lime
+        case .badminton: orange
+        case .pingPong: lime
+        case .cricket: orange
+        case .soccer: lime
+        case .volleyball: orange
+        case .tennis: lime
+        case .squash: orange
+        case .baseball: lime
+        case .football: orange
         }
     }
 
-    static func soft(_ sport: Sport) -> Color { accent(sport).opacity(0.11) }
+    static func soft(_ sport: Sport) -> Color { accent(sport).opacity(0.18) }
 }
 
 private struct MPAssetSportIcon: View {
     let sport: Sport
     var size: CGFloat
 
-    private var asset: String? {
-        switch sport {
-        case .pickleball: "sport_pickleball"
-        case .badminton: "sport_badminton"
-        case .cricket: "sport_cricket"
-        case .soccer: "sport_soccer"
-        case .tennis: "sport_tennis"
-        default: nil
-        }
-    }
-
     var body: some View {
-        if let asset {
-            Image(asset).resizable().scaledToFit().frame(width: size, height: size)
-        } else {
-            Image(systemName: sport.sfSymbol)
-                .font(.system(size: size * 0.8, weight: .medium))
-                .foregroundStyle(MP.accent(sport))
-                .frame(width: size, height: size)
-        }
+        Image(systemName: sport.sfSymbol)
+            .font(.system(size: size * 0.8, weight: .medium))
+            .foregroundStyle(MP.accent(sport))
+            .frame(width: size, height: size)
     }
 }
 
@@ -294,8 +288,8 @@ private struct MPCard<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .background(MP.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.line, lineWidth: 1))
+            .background(MP.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24).stroke(MP.strongLine, lineWidth: 1))
             .shadow(color: MP.shadow, radius: 8, y: 2)
     }
 }
@@ -305,7 +299,7 @@ private struct MPSectionHeader: View {
     var action: String?
     var body: some View {
         HStack {
-            Text(title).font(.system(size: 17, weight: .bold))
+            Text(title).font(MP.display(24, weight: .bold))
             Spacer()
             if let action { Text(action).font(.system(size: 12, weight: .bold)).foregroundStyle(MP.ink3) }
         }
@@ -342,22 +336,41 @@ private struct NativeHomeScreen: View {
     }
 
     private var hero: some View {
-        VStack(spacing: 2) {
-            Text("Good Afternoon, \(firstName)!")
-                .font(.system(size: 26, weight: .heavy))
-                .multilineTextAlignment(.center)
-            Text(app.activeSport.category == .individual ? "\(app.activeSport.title) · MP Rating \(app.currentRating)" : "\(app.activeSport.title) · Peer rated by your squad")
-                .font(.system(size: 12)).foregroundStyle(MP.ink3)
-            ZStack {
-                Circle().fill(MP.soft(app.activeSport)).frame(width: 250, height: 250)
-                Circle().fill(MP.accent(app.activeSport).opacity(0.78)).frame(width: 66, height: 66).offset(x: -112, y: -62)
-                Circle().fill(MP.accent(app.activeSport).opacity(0.48)).frame(width: 50, height: 50).offset(x: 112, y: -88)
-                AvatarView(avatar: app.me.avatar, size: 218)
-                    .overlay(Circle().stroke(.white, lineWidth: 6))
+        VStack(alignment: .leading, spacing: 14) {
+            Text(app.activeSport.title.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .tracking(1.2)
+                .foregroundStyle(MP.ink3)
+
+            (Text("Ready, ").foregroundStyle(MP.ink4) + Text("\(firstName)."))
+                .font(MP.display(50, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(MP.surface2)
+                Circle().fill(MP.accent(app.activeSport)).frame(width: 170, height: 170).offset(x: 196, y: 92)
+                MPAssetSportIcon(sport: app.activeSport, size: 108).opacity(0.12).offset(x: 230, y: -84)
+                AvatarView(avatar: app.me.avatar, size: 228)
+                    .offset(x: 86, y: 26)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(app.activeSport.category == .individual ? "MP RATING" : "PEER RATED")
+                        .font(.system(size: 10, weight: .heavy)).tracking(1)
+                    Text(app.activeSport.category == .individual ? "\(app.currentRating)" : "4.8")
+                        .font(MP.display(38, weight: .bold))
+                    Text(app.activeSport.category == .individual ? "Ready for your next match." : "Ready for your next fixture.")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(MP.ink2)
+                        .frame(width: 125, alignment: .leading)
+                }
+                .padding(20)
             }
-            .frame(height: 282)
+            .frame(height: 246)
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 28).stroke(MP.strongLine, lineWidth: 1))
         }
-        .padding(.top, 2)
+        .padding(.top, 8)
     }
 
     private var firstName: String {
@@ -427,7 +440,7 @@ private struct PersonPoster: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                LinearGradient(colors: [MP.soft(sport), .white], startPoint: .topLeading, endPoint: .bottomTrailing)
+                LinearGradient(colors: [MP.accent(sport), MP.accent(sport).opacity(0.72)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 MPAssetSportIcon(sport: sport, size: 82).opacity(0.14).offset(x: 54, y: 34)
                 AvatarView(avatar: player.avatar, size: 112)
             }
@@ -445,9 +458,9 @@ private struct PersonPoster: View {
             .padding(13)
         }
         .frame(width: 172, height: 258, alignment: .topLeading)
-        .background(.white)
+        .background(MP.surface)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.line, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.strongLine, lineWidth: 1))
         .shadow(color: MP.shadow, radius: 8, y: 2)
     }
 }
@@ -503,8 +516,8 @@ private struct CommunityPoster: View {
             .padding(13)
         }
         .frame(width: 236, height: 226)
-        .background(.white).clipShape(RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.line, lineWidth: 1))
+        .background(MP.surface).clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.strongLine, lineWidth: 1))
         .shadow(color: MP.shadow, radius: 8, y: 2)
     }
 }
@@ -657,9 +670,9 @@ private struct MPSegmented: View {
             ForEach(options, id: \.self) { option in
                 Button(option) { selection = option }
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(selection == option ? MP.ink : MP.ink3)
+                    .foregroundStyle(selection == option ? MP.black : MP.ink3)
                     .frame(maxWidth: .infinity).frame(height: 38)
-                    .background(selection == option ? .white : .clear, in: RoundedRectangle(cornerRadius: 11))
+                    .background(selection == option ? MP.lime : .clear, in: RoundedRectangle(cornerRadius: 11))
                     .shadow(color: selection == option ? MP.shadow : .clear, radius: 4, y: 1)
             }
         }
@@ -688,10 +701,10 @@ private struct WeeklyCalendar: View {
                 ForEach(days, id: \.self) { day in
                     let today = day == "T 11"
                     VStack(spacing: 4) {
-                        Text(day.prefix(1)).font(.system(size: 10, weight: .bold)).foregroundStyle(today ? MP.accent(sport) : MP.ink3)
+                        Text(day.prefix(1)).font(.system(size: 12, weight: .bold)).foregroundStyle(today ? MP.accent(sport) : MP.ink3)
                         Text(day.split(separator: " ").last ?? "")
-                            .font(.system(size: 11, weight: .bold)).foregroundStyle(today ? .white : MP.ink)
-                            .frame(width: 24, height: 24).background(today ? MP.accent(sport) : .clear, in: Circle())
+                            .font(.system(size: 13, weight: .bold)).foregroundStyle(today ? MP.black : MP.ink)
+                            .frame(width: 28, height: 28).background(today ? MP.accent(sport) : .clear, in: Circle())
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -702,7 +715,7 @@ private struct WeeklyCalendar: View {
                 HStack(spacing: 0) {
                     VStack(spacing: 0) {
                         ForEach(hours, id: \.self) { hour in
-                            Text(hourLabel(hour)).font(.system(size: 9)).foregroundStyle(MP.ink4)
+                            Text(hourLabel(hour)).font(.system(size: 11, weight: .medium)).foregroundStyle(MP.ink3)
                                 .frame(width: 38, height: 40, alignment: .topLeading)
                         }
                     }
@@ -718,14 +731,17 @@ private struct WeeklyCalendar: View {
             .frame(height: CGFloat(hours.count) * 40)
             .clipped()
         }
+        .padding(14)
+        .background(MP.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(MP.strongLine, lineWidth: 1))
     }
 
     private func calendarEvent(day: Int, start: Double, duration: Double, title: String, tentative: Bool) -> some View {
         GeometryReader { geo in
             let column = (geo.size.width - 38) / 7
-            Text(title).font(.system(size: 8.5, weight: .bold)).lineLimit(3)
-                .foregroundStyle(tentative ? MP.accent(sport) : .white)
-                .padding(4).frame(width: column - 2, height: duration * 40, alignment: .topLeading)
+            Text(title).font(.system(size: 9, weight: .bold)).lineLimit(2).minimumScaleFactor(0.72)
+                .foregroundStyle(tentative ? MP.accent(sport) : MP.black)
+                .padding(3).frame(width: column - 2, height: duration * 40, alignment: .topLeading)
                 .background(tentative ? MP.soft(sport) : MP.accent(sport), in: RoundedRectangle(cornerRadius: 5))
                 .overlay(RoundedRectangle(cornerRadius: 5).stroke(tentative ? MP.accent(sport) : .clear, style: StrokeStyle(lineWidth: 1.2, dash: tentative ? [4, 3] : [])))
                 .offset(x: 38 + CGFloat(day) * column + 1, y: CGFloat(start - 7) * 40)
@@ -738,7 +754,7 @@ private struct WeeklyCalendar: View {
 private extension View {
     func calendarNav(width: CGFloat = 34) -> some View {
         self.foregroundStyle(MP.ink2).frame(width: width, height: 32)
-            .background(.white, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(MP.line, lineWidth: 1))
+            .background(MP.surface2, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(MP.line, lineWidth: 1))
     }
 }
 
@@ -787,7 +803,7 @@ private struct MPPrimaryButton: View {
     let icon: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Label(title, systemImage: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50).background(MP.black, in: RoundedRectangle(cornerRadius: 16)) }
+        Button(action: action) { Label(title, systemImage: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(MP.black).frame(maxWidth: .infinity).frame(height: 52).background(MP.orange, in: RoundedRectangle(cornerRadius: 18)) }
     }
 }
 
@@ -828,7 +844,7 @@ private struct NativeChatsScreen: View {
                     Image(systemName: "magnifyingglass").foregroundStyle(MP.ink4)
                     TextField("Search by name or username", text: $search).font(.system(size: 14))
                 }
-                .padding(.horizontal, 14).frame(height: 46).background(.white, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
+                .padding(.horizontal, 14).frame(height: 46).background(MP.surface2, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
 
                 ForEach(conversations.filter { conversation in
                     guard !search.isEmpty, let player = app.player(conversation.partnerId) else { return search.isEmpty }
@@ -884,7 +900,7 @@ private struct NativeChatScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).frame(width: 36, height: 36).background(.white, in: Circle()).overlay(Circle().stroke(MP.line)) }
+                Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).frame(width: 36, height: 36).background(MP.surface2, in: Circle()).overlay(Circle().stroke(MP.line)) }
                 if let player { AvatarView(avatar: player.avatar, size: 36) }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(player?.name ?? "Conversation").font(.system(size: 15.5, weight: .bold))
@@ -892,7 +908,7 @@ private struct NativeChatScreen: View {
                 }
                 Spacer()
                 if app.activeSport.category == .individual {
-                    Button {} label: { Image(systemName: "trophy").frame(width: 36, height: 36).background(.white, in: Circle()).overlay(Circle().stroke(MP.line)) }
+                    Button {} label: { Image(systemName: "trophy").frame(width: 36, height: 36).background(MP.surface2, in: Circle()).overlay(Circle().stroke(MP.line)) }
                 }
             }
             .padding(.horizontal, 20).padding(.vertical, 10)
@@ -911,9 +927,9 @@ private struct NativeChatScreen: View {
                         HStack {
                             if message.fromMe { Spacer(minLength: 70) }
                             Text(messageText(message))
-                                .font(.system(size: 14)).foregroundStyle(message.fromMe ? .white : MP.ink)
+                                .font(.system(size: 14)).foregroundStyle(message.fromMe ? MP.black : MP.ink)
                                 .padding(.horizontal, 13).padding(.vertical, 10)
-                                .background(message.fromMe ? MP.accent(app.activeSport) : .white, in: RoundedRectangle(cornerRadius: 17))
+                                .background(message.fromMe ? MP.accent(app.activeSport) : MP.surface2, in: RoundedRectangle(cornerRadius: 17))
                                 .overlay(RoundedRectangle(cornerRadius: 17).stroke(message.fromMe ? .clear : MP.line))
                             if !message.fromMe { Spacer(minLength: 70) }
                         }
@@ -925,12 +941,12 @@ private struct NativeChatScreen: View {
 
             HStack(spacing: 9) {
                 TextField("Write a message", text: $draft)
-                    .padding(.horizontal, 14).frame(height: 44).background(.white, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
-                Button { draft = "" } label: { Image(systemName: "paperplane.fill").foregroundStyle(.white).frame(width: 44, height: 44).background(MP.accent(app.activeSport), in: Circle()) }
+                    .padding(.horizontal, 14).frame(height: 44).background(MP.surface2, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
+                Button { draft = "" } label: { Image(systemName: "paperplane.fill").foregroundStyle(MP.black).frame(width: 44, height: 44).background(MP.accent(app.activeSport), in: Circle()) }
             }
-            .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(.white.opacity(0.94))
+            .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(MP.surface)
         }
-        .foregroundStyle(MP.ink).preferredColorScheme(.light)
+        .foregroundStyle(MP.ink).preferredColorScheme(.dark)
     }
 
     private func messageText(_ message: ChatMessage) -> String {
@@ -957,24 +973,26 @@ private struct NativeProfileScreen: View {
                     AvatarView(avatar: app.me.avatar, size: 84)
                         .overlay(Circle().stroke(.white, lineWidth: 4))
                         .shadow(color: MP.shadow, radius: 8, y: 2)
-                    Text(app.me.name.isEmpty ? "Your name" : app.me.name).font(.system(size: 21, weight: .bold))
-                    Text("@\(app.me.username) · \(app.me.age) · \(app.me.gender.rawValue)").font(.system(size: 12)).foregroundStyle(MP.ink3)
+                    Text(app.me.name.isEmpty ? "Your name" : app.me.name).font(MP.display(28, weight: .bold))
+                    Text("@\(app.me.username) · \(app.me.age) · \(app.me.gender.rawValue)").font(.system(size: 12)).foregroundStyle(Color.black.opacity(0.55))
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(app.mySports) { sport in
                                 Button { app.activeSport = sport } label: {
                                     HStack(spacing: 5) { MPAssetSportIcon(sport: sport, size: 15); Text(sport.title) }
                                         .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(app.activeSport == sport ? MP.accent(sport) : MP.ink3)
+                                        .foregroundStyle(app.activeSport == sport ? Color.black : Color.black.opacity(0.55))
                                         .padding(.horizontal, 12).frame(height: 36)
-                                        .background(app.activeSport == sport ? MP.soft(sport) : .white, in: Capsule())
-                                        .overlay(Capsule().stroke(app.activeSport == sport ? MP.accent(sport).opacity(0.24) : MP.line))
+                                        .background(app.activeSport == sport ? MP.accent(sport) : Color.black.opacity(0.06), in: Capsule())
+                                        .overlay(Capsule().stroke(Color.black.opacity(0.12)))
                                 }
                             }
                         }
                     }
                 }
-                .padding(.top, 6)
+                .foregroundStyle(Color.black)
+                .padding(18)
+                .background(Color(hex: "F7F7F3"), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
 
                 ratingCard
                 MPSectionHeader(title: "\(app.activeSport.title) statistics")
@@ -1025,7 +1043,7 @@ private struct NativeProfileScreen: View {
 
     private func statistic(_ value: String, _ label: String, color: Color = MP.ink) -> some View {
         VStack(spacing: 4) { Text(value).font(.system(size: 25, weight: .heavy)).foregroundStyle(color); Text(label).font(.system(size: 11)).foregroundStyle(MP.ink3) }
-            .frame(maxWidth: .infinity).padding(.vertical, 14).background(.white, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(MP.line))
+            .frame(maxWidth: .infinity).padding(.vertical, 14).background(MP.surface, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(MP.strongLine))
     }
 
     private var ratingTrend: some View {
@@ -1079,16 +1097,34 @@ private struct NativeProfileScreen: View {
 private struct NativeNotificationsSheet: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        NavigationStack {
-            List {
-                Label("Elena sent a connection request.", systemImage: "person.badge.plus")
-                Label("Your score is ready to verify.", systemImage: "checkmark.seal")
-                Label("A challenge time was proposed.", systemImage: "calendar")
-                Label("Your rating moved up three points.", systemImage: "chart.line.uptrend.xyaxis")
+        VStack(spacing: 18) {
+            HStack {
+                Text("Notifications").font(MP.display(30, weight: .bold))
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark").font(.system(size: 15, weight: .bold))
+                        .frame(width: 38, height: 38).background(MP.surface2, in: Circle())
+                        .overlay(Circle().stroke(MP.line))
+                }
             }
-            .navigationTitle("Notifications")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark") } } }
+            ForEach([
+                ("Elena sent a connection request.", "person.badge.plus"),
+                ("Your score is ready to verify.", "checkmark.seal"),
+                ("A challenge time was proposed.", "calendar"),
+                ("Your rating moved up three points.", "chart.line.uptrend.xyaxis")
+            ], id: \.0) { item in
+                HStack(spacing: 13) {
+                    Image(systemName: item.1).frame(width: 42, height: 42)
+                        .background(MP.orange, in: Circle()).foregroundStyle(MP.black)
+                    Text(item.0).font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                }
+                .padding(14).background(MP.surface, in: RoundedRectangle(cornerRadius: 18))
+                .overlay(RoundedRectangle(cornerRadius: 18).stroke(MP.line))
+            }
+            Spacer()
         }
+        .padding(20).background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
     }
 }
 
@@ -1115,7 +1151,7 @@ private struct NativeChallengeSheet: View {
                             ForEach(app.players.filter { $0.profile(app.activeSport) != nil }.prefix(8)) { player in
                                 Button { opponent = player.id } label: {
                                     VStack(spacing: 5) { AvatarView(avatar: player.avatar, size: 48); Text(player.name.split(separator: " ").first.map(String.init) ?? player.name).font(.system(size: 11, weight: .bold)) }
-                                        .foregroundStyle(MP.ink).padding(8).background(opponent == player.id ? MP.soft(app.activeSport) : .white, in: RoundedRectangle(cornerRadius: 15)).overlay(RoundedRectangle(cornerRadius: 15).stroke(opponent == player.id ? MP.accent(app.activeSport) : MP.line))
+                                        .foregroundStyle(MP.ink).padding(8).background(opponent == player.id ? MP.soft(app.activeSport) : MP.surface, in: RoundedRectangle(cornerRadius: 15)).overlay(RoundedRectangle(cornerRadius: 15).stroke(opponent == player.id ? MP.accent(app.activeSport) : MP.line))
                                 }
                             }
                         }
@@ -1128,18 +1164,18 @@ private struct NativeChallengeSheet: View {
                         ForEach(["7:00 PM", "9:00 AM", "11:00 AM"], id: \.self) { time in choice(time, selected: selectedTime == time) { selectedTime = time } }
                     }
                     fieldLabel("Venue")
-                    TextField("Venue", text: $venue).padding(.horizontal, 14).frame(height: 48).background(.white, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
+                    TextField("Venue", text: $venue).padding(.horizontal, 14).frame(height: 48).background(MP.surface, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
                     MPPrimaryButton(title: "Send the Challenge", icon: "paperplane") { dismiss() }.opacity(opponent == nil ? 0.45 : 1).disabled(opponent == nil)
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.light)
+        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
     }
 
     private func fieldLabel(_ value: String) -> some View { Text(value.uppercased()).font(.system(size: 11, weight: .heavy)).tracking(0.8).foregroundStyle(MP.ink3) }
     private func choice(_ value: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(value).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.accent(app.activeSport) : MP.ink2).padding(.horizontal, 12).frame(height: 38).background(selected ? MP.soft(app.activeSport) : .white, in: Capsule()).overlay(Capsule().stroke(selected ? MP.accent(app.activeSport) : MP.line)) }
+        Button(action: action) { Text(value).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.accent(app.activeSport) : MP.ink2).padding(.horizontal, 12).frame(height: 38).background(selected ? MP.soft(app.activeSport) : MP.surface, in: Capsule()).overlay(Capsule().stroke(selected ? MP.accent(app.activeSport) : MP.line)) }
     }
 }
 
@@ -1182,7 +1218,7 @@ private struct NativeScoreSheet: View {
                 .padding(.horizontal, 20).padding(.bottom, 28)
             }
         }
-        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.light)
+        .background(MP.background).foregroundStyle(MP.ink).preferredColorScheme(.dark)
     }
 
     private func winner(_ index: Int) -> Int { winners.indices.contains(index) ? winners[index] : 0 }

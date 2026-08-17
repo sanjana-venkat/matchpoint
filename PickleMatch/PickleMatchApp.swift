@@ -9,7 +9,7 @@ struct PickleMatchApp: App {
             RootView()
                 .environmentObject(app)
                 .tint(app.themeColor)
-                .preferredColorScheme(.light)
+                .preferredColorScheme(.dark)
         }
     }
 }
