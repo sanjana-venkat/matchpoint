@@ -76,7 +76,7 @@ struct SashankMainView: View {
         HStack(spacing: 10) {
             Button { withAnimation(.easeOut(duration: 0.16)) { showSports.toggle() } } label: {
                 HStack(spacing: 6) {
-                    MPAssetSportIcon(sport: app.activeSport, size: 23)
+                    MPAssetSportIcon(sport: app.activeSport, size: 30)
                     Text(app.activeSport.title)
                         .font(.system(size: 12, weight: .bold))
                     Image(systemName: "chevron.down")
@@ -127,7 +127,7 @@ struct SashankMainView: View {
                     showSports = false
                 } label: {
                     HStack(spacing: 11) {
-                        MPAssetSportIcon(sport: sport, size: 21)
+                        MPAssetSportIcon(sport: sport, size: 30)
                         Text(sport.title).font(.system(size: 15, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
                         Text(sport.category == .individual ? "\(app.me.profile(sport)?.rating ?? 80)" : "Peer").font(.system(size: 11, weight: .bold)).foregroundStyle(MP.ink3)
                     }
@@ -247,12 +247,12 @@ private enum MP {
 
     static func accent(_ sport: Sport) -> Color {
         switch sport {
-        case .pickleball: lime
-        case .badminton: orange
-        case .pingPong: lime
-        case .cricket: orange
-        case .soccer: lime
-        case .volleyball: orange
+        case .pickleball: Color(hex: "7D9A6E")
+        case .badminton: Color(hex: "7B93B8")
+        case .pingPong: Color(hex: "C67D57")
+        case .cricket: Color(hex: "AE5A4E")
+        case .soccer: Color(hex: "C77E93")
+        case .volleyball: Color(hex: "8E7BA8")
         case .tennis: lime
         case .squash: orange
         case .baseball: lime
@@ -273,10 +273,14 @@ private struct MPAssetSportIcon: View {
     var size: CGFloat
 
     var body: some View {
-        Image(systemName: sport.sfSymbol)
-            .font(.system(size: size * 0.8, weight: .medium))
-            .foregroundStyle(MP.accent(sport))
-            .frame(width: size, height: size)
+        if let asset = sport.illustrationIconAsset {
+            Image(asset).resizable().scaledToFit().frame(width: size, height: size)
+        } else {
+            Image(systemName: sport.sfSymbol)
+                .font(.system(size: size * 0.8, weight: .medium))
+                .foregroundStyle(MP.accent(sport))
+                .frame(width: size, height: size)
+        }
     }
 }
 
@@ -337,48 +341,46 @@ private struct NativeHomeScreen: View {
     }
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(app.activeSport.title.uppercased())
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.2)
+        VStack(spacing: 4) {
+            Text("Good Afternoon, \(firstName)!")
+                .font(.system(size: 26, weight: .heavy))
+                .multilineTextAlignment(.center)
+            Text(app.activeSport.category == .individual ? "\(app.activeSport.title) · MP Rating \(app.currentRating)" : "\(app.activeSport.title) · Peer rated by your squad")
+                .font(.system(size: 13))
                 .foregroundStyle(MP.ink3)
 
-            (Text("Ready, ").foregroundStyle(MP.ink4) + Text("\(firstName)."))
-                .font(MP.display(50, weight: .bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-
-            ZStack {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(MP.surface2)
-                Circle().fill(MP.accent(app.activeSport).opacity(0.88)).frame(width: 150, height: 150).offset(x: 145, y: 90)
-                MPAssetSportIcon(sport: app.activeSport, size: 94).opacity(0.09).offset(x: 120, y: -70)
-                HStack(alignment: .center, spacing: 6) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(app.activeSport.category == .individual ? "MP RATING" : "PEER RATED")
-                            .font(.system(size: 10, weight: .heavy)).tracking(1)
-                        Text(app.activeSport.category == .individual ? "\(app.currentRating)" : "4.8")
-                            .font(MP.display(38, weight: .bold))
-                        Text(app.activeSport.category == .individual ? "Ready for your next match." : "Ready for your next fixture.")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(MP.ink2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(width: 118, alignment: .leading)
-                    Spacer(minLength: 0)
-                    AvatarView(avatar: app.me.avatar, size: 184)
+            Group {
+                if let asset = activeHeroAsset {
+                    Image(asset)
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityLabel("\(app.activeSport.title) player illustration")
+                } else {
+                    AvatarView(avatar: app.me.avatar, size: 218)
                 }
-                .padding(.horizontal, 18)
             }
-            .frame(height: 224)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 28).stroke(MP.strongLine, lineWidth: 1))
+            .frame(width: 280, height: 280)
+            .id(app.activeSport)
+            .transition(.opacity)
         }
+        .frame(maxWidth: .infinity)
         .padding(.top, 8)
+        .animation(.easeInOut(duration: 0.35), value: app.activeSport)
     }
 
     private var firstName: String {
         app.me.name.split(separator: " ").first.map(String.init) ?? "player"
+    }
+
+    private var activeHeroAsset: String? {
+        guard app.activeSport == .badminton else {
+            return app.activeSport.heroIllustrationAsset
+        }
+        switch app.me.gender {
+        case .male: return "hero-badminton-boy"
+        case .female: return "hero-badminton-girl"
+        case .nonBinary: return "hero-badminton"
+        }
     }
 
     private func homeSection(

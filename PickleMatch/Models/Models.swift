@@ -36,6 +36,31 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Watercolour artwork supplied for content-level sport illustration.
+    var illustrationIconAsset: String? {
+        switch self {
+        case .pickleball: "sport_pickleball"
+        case .badminton: "sport_badminton"
+        case .pingPong: "sport_pingpong"
+        case .cricket: "sport_cricket"
+        case .soccer: "sport_soccer"
+        case .volleyball: "sport_volleyball"
+        default: nil
+        }
+    }
+
+    var heroIllustrationAsset: String? {
+        switch self {
+        case .pickleball: "hero-pickleball"
+        case .badminton: "hero-badminton"
+        case .pingPong: "hero-pingpong"
+        case .cricket: "hero-cricket"
+        case .soccer: "hero-soccer"
+        case .volleyball: "hero-volleyball"
+        default: nil
+        }
+    }
+
     var category: SportCategory {
         switch self {
         case .pickleball, .badminton, .tennis, .pingPong, .squash: return .individual
@@ -124,16 +149,15 @@ struct Avatar: Identifiable, Hashable, Codable {
     let symbol: String
     let colorHex: String
 
-    private static let illustrated: [Avatar] = [
-        Avatar(id: "asha", imageName: "AvatarAsha", symbol: "person.fill", colorHex: "D65D43"),
-        Avatar(id: "marcus", imageName: "AvatarMarcus", symbol: "person.fill", colorHex: "2A5E4A"),
-        Avatar(id: "leo", imageName: "AvatarLeo", symbol: "person.fill", colorHex: "E6D5B5"),
-        Avatar(id: "sofia", imageName: "AvatarSofia", symbol: "person.fill", colorHex: "168B82"),
-        Avatar(id: "ruth", imageName: "AvatarRuth", symbol: "person.fill", colorHex: "B8662B"),
-        Avatar(id: "omar", imageName: "AvatarOmar", symbol: "person.fill", colorHex: "16566A"),
-        Avatar(id: "quinn", imageName: "AvatarQuinn", symbol: "person.fill", colorHex: "D98B62"),
-        Avatar(id: "nia", imageName: "AvatarNia", symbol: "person.fill", colorHex: "315C9A"),
-    ]
+    private static let illustrated: [Avatar] = (1...20).map { index in
+        let identifier = String(format: "%02d", index)
+        return Avatar(
+            id: "watercolor-\(identifier)",
+            imageName: "Avatar\(identifier)",
+            symbol: "person.fill",
+            colorHex: "F7F4EC"
+        )
+    }
 
     private static let symbolChoices: [(String, String, String)] = [
         ("explorer", "person.crop.circle.fill", "7C5CFC"), ("runner", "figure.run", "E96B4C"),

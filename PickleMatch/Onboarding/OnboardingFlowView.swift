@@ -400,17 +400,9 @@ private struct MultiSportSocialHero: View {
         Image(imageName)
             .resizable()
             .scaledToFill()
-            .saturation(0.78)
-            .contrast(1.04)
-            .overlay(
-                LinearGradient(
-                    colors: [.clear, Theme.bg.opacity(0.18)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-            )
             .clipShape(RoundedRectangle(cornerRadius: 28))
             .overlay(RoundedRectangle(cornerRadius: 28).stroke(Theme.hairline, lineWidth: 1))
+            .accessibilityHidden(true)
     }
 }
 

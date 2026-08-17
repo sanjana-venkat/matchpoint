@@ -131,7 +131,7 @@ final class AppState: ObservableObject {
         veteran.username = "alexplaysall"
         veteran.gender = .nonBinary
         veteran.age = 32
-        veteran.avatar = Avatar.all[3]
+        veteran.avatar = Avatar.all[2]
         veteran.bio = "Competitive when the score matters, welcoming when it does not. Always ready for one more game."
         veteran.availability = [
             AvailabilitySlot(weekday: 2, period: .evening),
