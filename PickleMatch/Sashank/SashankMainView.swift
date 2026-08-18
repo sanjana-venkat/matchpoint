@@ -510,14 +510,14 @@ private struct NativeHomeScreen: View {
             MPSectionHeader(title: title, action: action)
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
+                HStack(spacing: 12) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, player in
                         Button { selectedPlayer = player } label: { card(player, index) }
                             .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 26)
+                .padding(.top, 12)
                 .padding(.bottom, 8)
             }
         }
@@ -529,7 +529,7 @@ private struct NativeHomeScreen: View {
             MPSectionHeader(title: app.activeSport.category == .group ? "Upcoming fixtures" : "Challenges", action: app.activeSport.category == .group ? "Calendar" : "See all")
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
+                HStack(spacing: 12) {
                     ForEach(activeChallenges.prefix(4)) { match in
                         Button { selectedChallenge = match } label: {
                             PersonPoster(player: app.player(match.opponentId) ?? players[0], sport: match.sport, line1: match.date.formatted(date: .abbreviated, time: .shortened), line2: match.venue, badge: match.state == .proposed ? (match.proposedByMe ? "Awaiting reply" : "Needs a reply") : "Confirmed", badgeColor: MP.accent(match.sport))
@@ -538,7 +538,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 26)
+                .padding(.top, 12)
                 .padding(.bottom, 8)
             }
         }
@@ -556,7 +556,7 @@ private struct NativeHomeScreen: View {
             }
             .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
+                HStack(spacing: 12) {
                     ForEach(requestPlayers) { player in
                         Button { selectedRequest = player } label: {
                             PersonPoster(
@@ -572,7 +572,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 26)
+                .padding(.top, 12)
                 .padding(.bottom, 8)
             }
         }
@@ -593,18 +593,18 @@ private struct NativeHomeScreen: View {
                     }
                     .padding(.horizontal, RallyLayout.gutter)
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 18) {
+                        HStack(spacing: 12) {
                             ForEach(fixtures) { fixture in
                                 Button { selectedGroupFixture = fixture } label: {
-                                    VStack(alignment: .leading, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 7) {
                                         RallySportTag(sport: fixture.sport)
-                                        Text(fixture.opponent).font(RallyType.title).foregroundStyle(MP.ink)
-                                        Text(fixture.title).font(RallyType.body()).foregroundStyle(MP.ink3)
+                                        Text(fixture.opponent).font(RallyType.cardTitle).foregroundStyle(MP.ink).lineLimit(2)
+                                        Text(fixture.title).font(RallyType.caption).foregroundStyle(MP.ink3).lineLimit(2)
                                         Spacer()
-                                        Text(fixture.date.formatted(date: .abbreviated, time: .shortened)).font(RallyType.action)
-                                        Text(fixture.venue).font(RallyType.caption).foregroundStyle(MP.ink3).lineLimit(2)
+                                        Text(fixture.date.formatted(date: .abbreviated, time: .shortened)).font(.system(size: 11, weight: .bold))
+                                        Text(fixture.venue).font(.system(size: 10)).foregroundStyle(MP.ink3).lineLimit(2)
                                     }
-                                    .padding(22).frame(width: 282, height: 246, alignment: .leading)
+                                    .padding(12).frame(width: 140, height: 208, alignment: .leading)
                                     .background(MP.surface, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius))
                                     .overlay(RoundedRectangle(cornerRadius: RallyLayout.cardRadius).stroke(MP.strongLine))
                                 }
@@ -629,7 +629,7 @@ private struct NativeHomeScreen: View {
             MPSectionHeader(title: title, action: action)
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 18) {
+                HStack(spacing: 12) {
                     ForEach(items) { faceOff in
                         if let player = app.player(faceOff.opponentId) {
                             Button { select(faceOff) } label: {
@@ -647,7 +647,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 26)
+                .padding(.top, 12)
                 .padding(.bottom, 8)
             }
         }
@@ -908,27 +908,31 @@ private struct PersonPoster: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             RallyPhoto(name: player.rallyPhotoName)
-                .frame(width: 282, height: 396)
+                .frame(width: 140, height: 197)
                 .clipped()
                 .overlay(RallyPalette.photoScrim)
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
                 RallySportTag(sport: sport)
-                Text(player.name).font(RallyType.title).foregroundStyle(MP.background).lineLimit(1)
-                Text(line1).font(RallyType.caption).foregroundStyle(RallyPalette.creamMuted).lineLimit(1)
-                Text(line2).font(RallyType.caption).foregroundStyle(RallyPalette.creamMuted).lineLimit(1)
+                Text(player.name)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(MP.background)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                Text(line1).font(.system(size: 10.5, weight: .medium)).foregroundStyle(RallyPalette.creamMuted).lineLimit(1)
+                Text(line2).font(.system(size: 10.5, weight: .medium)).foregroundStyle(RallyPalette.creamMuted).lineLimit(1)
                 if let badge {
-                    Text(badge).font(RallyType.action).foregroundStyle(MP.ink)
-                        .padding(.horizontal, 18).frame(height: 48)
+                    Text(badge).font(.system(size: 11, weight: .bold)).foregroundStyle(MP.ink)
+                        .padding(.horizontal, 12).frame(height: 34)
                         .background(badgeColor, in: Capsule()).padding(.top, 4)
                 }
             }
-            .padding(22)
-            RallyRatingPlate(sport: sport, profile: player.profile(sport), diameter: 78)
+            .padding(12)
+            RallyRatingPlate(sport: sport, profile: player.profile(sport), diameter: 46)
                 .rallyLifted(0.8)
-                .offset(x: 220, y: -320)
+                .offset(x: 88, y: -141)
         }
-        .frame(width: 282, height: 396, alignment: .topLeading)
-        .clipShape(RoundedRectangle(cornerRadius: RallyLayout.photoRadius, style: .continuous))
+        .frame(width: 140, height: 197, alignment: .topLeading)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
@@ -967,47 +971,52 @@ private struct CommunityPoster: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                RallyPhoto(name: community.imageName)
-                    .frame(width: 272, height: 164)
+                RallyPhoto(name: catalogCourtName)
+                    .frame(width: 140, height: 84)
                     .clipped()
                 Text(community.kind)
                     .rallyEyebrow(MP.ink)
                     .padding(.horizontal, 12)
                     .frame(height: 30)
                     .background(MP.orange, in: Capsule())
-                    .padding(14)
+                    .padding(9)
             }
-            .frame(width: 272, height: 164)
+            .frame(width: 140, height: 84)
             .clipped()
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(community.name)
-                    .font(RallyType.cardTitle)
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(MP.ink)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(community.meta)
-                    .font(RallyType.caption)
+                    .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(MP.ink3)
                     .lineLimit(1)
                 Spacer(minLength: 2)
                 Button(action: action) {
                     Text(community.kind == "Facility" ? "View facility" : (community.kind == "Club" ? "Join community" : "Join league"))
-                        .font(RallyType.action).foregroundStyle(MP.background)
-                        .frame(maxWidth: .infinity).frame(height: 50)
+                        .font(.system(size: 10.5, weight: .bold)).foregroundStyle(MP.background)
+                        .frame(maxWidth: .infinity).frame(height: 30)
                         .background(MP.ink, in: Capsule())
                 }
                 .buttonStyle(RallyPressStyle())
             }
-            .padding(16)
+            .padding(8)
         }
-        .frame(width: 272, height: 350)
+        .frame(width: 140, height: 180)
         .background(MP.surface)
         .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous)
                 .stroke(MP.strongLine, lineWidth: 1)
         }
+    }
+
+    private var catalogCourtName: String {
+        let key = ImageCatalog.courtKey(for: sport)
+        return ImageCatalog.sources[key] == nil ? community.imageName : key
     }
 }
 
@@ -2029,7 +2038,7 @@ private struct NativeProfileScreen: View {
     @State private var settingsSheet: NativeProfileSettings?
 
     private var profile: SportProfile? { app.me.profile(app.activeSport) }
-    private var profileHeroImage: String { "Rally-player-maya" }
+    private var profileHeroImage: String { ImageCatalog.playerKey(slot: 14) }
 
     var body: some View {
         ScrollView {

@@ -455,16 +455,14 @@ private struct MultiSportSocialHero: View {
 
     private var imageName: String {
         switch variant {
-        case 0: return "Rally-scene-court"
-        case 1: return "Rally-scene-paddles"
-        default: return "Rally-hero-serve"
+        case 0: return "onboarding.01"
+        case 1: return "onboarding.02"
+        default: return "onboarding.03"
         }
     }
 
     var body: some View {
-        Image(imageName)
-            .resizable()
-            .scaledToFill()
+        RallyPhoto(name: imageName)
             .clipShape(RoundedRectangle(cornerRadius: 28))
             .overlay(RoundedRectangle(cornerRadius: 28).stroke(Theme.hairline, lineWidth: 1))
             .accessibilityHidden(true)

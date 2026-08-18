@@ -212,30 +212,57 @@ struct RallyPhoto: View {
     var contentMode: ContentMode = .fill
 
     var body: some View {
-        Image(name)
-            .resizable()
-            .aspectRatio(contentMode: contentMode)
-            .accessibilityHidden(true)
+        Group {
+            switch ImageCatalog.resolve(name) {
+            case .bundled(let assetName):
+                Image(assetName)
+                    .resizable()
+                    .aspectRatio(contentMode: contentMode)
+            case .remote(let url):
+                AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.22))) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: contentMode)
+                    case .failure:
+                        catalogPlaceholder
+                    case .empty:
+                        catalogPlaceholder.overlay(ProgressView().tint(RallyPalette.inkMuted))
+                    @unknown default:
+                        catalogPlaceholder
+                    }
+                }
+            case .missing:
+                catalogPlaceholder
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var catalogPlaceholder: some View {
+        ZStack {
+            RallyPalette.court
+            Image(systemName: "figure.pickleball")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(RallyPalette.inkMuted)
+        }
     }
 }
 
 extension Player {
     var rallyPhotoName: String {
-        let key: String
         switch name {
-        case let value where value.contains("Maya"): key = "player-maya"
-        case let value where value.contains("Diego"): key = "player-andre"
-        case let value where value.contains("Priya"): key = "player-june"
-        case let value where value.contains("Sam"): key = "player-sam"
-        case let value where value.contains("Aisha"): key = "player-nina"
-        case let value where value.contains("Tyler"): key = "player-teo"
-        case let value where value.contains("Grace"): key = "player-maya"
-        case let value where value.contains("Leo"): key = "player-andre"
-        case let value where value.contains("Hannah"): key = "player-june"
-        case let value where value.contains("Marcus"): key = "player-sam"
-        default: key = "player-teo"
+        case let value where value.contains("Maya"): return ImageCatalog.playerKey(slot: 2)
+        case let value where value.contains("Diego"): return ImageCatalog.playerKey(slot: 7)
+        case let value where value.contains("Priya"): return ImageCatalog.playerKey(slot: 10)
+        case let value where value.contains("Sam"): return ImageCatalog.playerKey(slot: 9)
+        case let value where value.contains("Aisha"): return ImageCatalog.playerKey(slot: 17)
+        case let value where value.contains("Tyler"): return ImageCatalog.playerKey(slot: 19)
+        case let value where value.contains("Grace"): return ImageCatalog.playerKey(slot: 8)
+        case let value where value.contains("Leo"): return ImageCatalog.playerKey(slot: 15)
+        case let value where value.contains("Hannah"): return ImageCatalog.playerKey(slot: 4)
+        case let value where value.contains("Marcus"): return ImageCatalog.playerKey(slot: 3)
+        default: return ImageCatalog.playerKey(slot: 1)
         }
-        return "Rally-\(key)"
     }
 
     var firstName: String {
