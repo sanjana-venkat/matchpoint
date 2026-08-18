@@ -72,20 +72,18 @@ struct SportIcon: View {
     var isSelected = false
     var color = Theme.ink
 
-    @ViewBuilder
     var body: some View {
-        if let asset = sport.illustrationIconAsset {
-            Image(asset)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
-                .accessibilityHidden(true)
-        } else {
-            SportGlyphShape(sport: sport)
-                .stroke(color, style: StrokeStyle(lineWidth: isSelected ? 2 : 1.5, lineCap: .round, lineJoin: .round))
-                .frame(width: size, height: size)
-                .accessibilityHidden(true)
-        }
+        SportGlyphShape(sport: sport)
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: isSelected ? 2 : 1.6,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
     }
 }
 
@@ -104,9 +102,14 @@ private struct SportGlyphShape: Shape {
 
         switch sport {
         case .pickleball:
-            p.addRoundedRect(in: CGRect(x: 4, y: 3, width: 9.5, height: 11), cornerSize: CGSize(width: 4, height: 4))
-            line([.init(x: 8.75, y: 14), .init(x: 8.75, y: 19.5)]); circle(18.5, 17.5, 3)
-            circle(17.4, 16.6, 0.08); circle(19.6, 16.9, 0.08); circle(18.3, 18.6, 0.08)
+            p.move(to: .init(x: 5.1, y: 3.5))
+            p.addCurve(to: .init(x: 13.7, y: 13.5), control1: .init(x: 11.0, y: 0.6), control2: .init(x: 17.1, y: 7.8))
+            p.addCurve(to: .init(x: 8.1, y: 15.2), control1: .init(x: 12.1, y: 15.6), control2: .init(x: 10.2, y: 16.0))
+            p.addCurve(to: .init(x: 5.1, y: 3.5), control1: .init(x: 3.4, y: 11.1), control2: .init(x: 2.8, y: 6.2))
+            line([.init(x: 8.7, y: 14.9), .init(x: 6.5, y: 20.8)])
+            circle(18.6, 17.2, 3.2)
+            circle(17.3, 16.1, 0.42); circle(19.4, 16.2, 0.42)
+            circle(18.3, 17.8, 0.42); circle(20.0, 18.3, 0.42)
         case .badminton:
             circle(12, 18.5, 2.5)
             line([.init(x: 10.8, y: 16.3), .init(x: 6.5, y: 5.5)]); line([.init(x: 12, y: 16), .init(x: 12, y: 5)]); line([.init(x: 13.2, y: 16.3), .init(x: 17.5, y: 5.5)])

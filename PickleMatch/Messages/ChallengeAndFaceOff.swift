@@ -75,16 +75,10 @@ struct ChallengeComposerView: View {
                                 .foregroundStyle(Theme.muted)
 
                             ForEach(proposedDates.indices, id: \.self) { index in
-                                DatePicker(
-                                    "Option \(index + 1)",
-                                    selection: $proposedDates[index],
-                                    in: Date()...
+                                RallyDateTimeSelector(
+                                    label: "Option \(index + 1)",
+                                    selection: $proposedDates[index]
                                 )
-                                .font(RallyType.meta)
-                                .tint(RallyPalette.ink)
-                                .padding(.horizontal, 18)
-                                .frame(height: 54)
-                                .background(Theme.surface2, in: Capsule())
                             }
 
                             TextField("Venue or court", text: $venue)
@@ -270,8 +264,7 @@ private struct ChallengeEditCard: View {
                     .font(Theme.ui(9, weight: .bold))
                     .foregroundStyle(Theme.color(for: faceOff.sport))
             }
-            DatePicker("Time", selection: $date, in: Date()...)
-                .tint(Theme.color(for: faceOff.sport))
+            RallyDateTimeSelector(label: "Time", selection: $date)
             TextField("Venue", text: $venue)
                 .padding(12)
                 .background(Theme.faint, in: RoundedRectangle(cornerRadius: 13))
@@ -542,7 +535,7 @@ struct FaceOffComposerView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("When") {
-                    DatePicker("Date & time", selection: $date, in: Date()...)
+                    RallyDateTimeSelector(label: "Date and time", selection: $date)
                 }
                 Section("Where") {
                     TextField("Venue / court", text: $venue)
@@ -606,10 +599,13 @@ struct ReportResultView: View {
         NavigationStack {
             Form {
                 Section("Who won?") {
-                    Picker("Result", selection: $outcome) {
-                        ForEach(MatchOutcome.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
+                    MinimalChoiceBar(
+                        options: MatchOutcome.allCases.map(\.rawValue),
+                        selection: Binding(
+                            get: { outcome.rawValue },
+                            set: { outcome = MatchOutcome(rawValue: $0) ?? .iWon }
+                        )
+                    )
                 }
 
                 Section("Rating preview") {

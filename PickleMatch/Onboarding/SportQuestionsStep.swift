@@ -39,22 +39,16 @@ struct SportQuestionsStep: View {
 
                     // Equipment
                     question("Do you have your own equipment?") {
-                        Toggle(isOn: $profile.ownsEquipment) {
-                            Label("I bring my own paddle & balls", systemImage: "bag.fill")
-                        }
-                        .tint(Theme.accent)
+                        RallyCheckbox(title: "I bring my own paddle and balls", isOn: $profile.ownsEquipment)
                         .padding()
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Theme.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous))
                     }
 
                     // Tournaments
                     question("Have you played in tournaments?") {
-                        Toggle(isOn: $profile.playedTournaments) {
-                            Label("I've competed in tournaments", systemImage: "trophy.fill")
-                        }
-                        .tint(Theme.accent)
+                        RallyCheckbox(title: "I have competed in tournaments", isOn: $profile.playedTournaments)
                         .padding()
-                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Theme.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous))
                     }
 
                     // Self-assessment

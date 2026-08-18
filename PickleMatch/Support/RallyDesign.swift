@@ -1,5 +1,42 @@
 import SwiftUI
 
+struct RallyCheckbox: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) { isOn.toggle() }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(isOn ? RallyPalette.ink : RallyPalette.creamDeep)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(isOn ? RallyPalette.ink : RallyPalette.rule, lineWidth: 1.5)
+                    if isOn {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .black))
+                            .foregroundStyle(RallyPalette.sun)
+                    }
+                }
+                .frame(width: 28, height: 28)
+
+                Text(title)
+                    .font(RallyType.body(15, weight: .semibold))
+                    .foregroundStyle(RallyPalette.ink)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn ? "Selected" : "Not selected")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+}
+
 // MARK: - Rally visual system, adapted to Match Point's domain models
 
 enum RallyPalette {
@@ -327,5 +364,196 @@ struct RallySportSelector: View {
             .padding(.vertical, 4)
         }
         .scrollClipDisabled()
+    }
+}
+
+struct RallySelectorOption: Identifiable, Equatable {
+    let id: String
+    let title: String
+    var subtitle: String? = nil
+}
+
+/// An app-owned dropdown replacement. It expands inline so selection never
+/// inherits a platform menu, material, typography, or corner treatment.
+struct RallyOptionSelector: View {
+    let label: String
+    let selection: String
+    let options: [RallySelectorOption]
+    let select: (RallySelectorOption) -> Void
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Button {
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) {
+                    expanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(label).rallyEyebrow()
+                        Text(selection)
+                            .font(RallyType.action)
+                            .foregroundStyle(RallyPalette.ink)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(RallyPalette.inkMuted)
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                }
+                .padding(.horizontal, 18)
+                .frame(minHeight: 58)
+                .background(RallyPalette.creamDeep, in: Capsule())
+            }
+            .buttonStyle(RallyPressStyle())
+            .accessibilityLabel("\(label), \(selection)")
+            .accessibilityHint(expanded ? "Collapses the options" : "Shows the options")
+
+            if expanded {
+                VStack(spacing: 4) {
+                    ForEach(options) { option in
+                        let selected = option.title == selection
+                        Button {
+                            select(option)
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+                                expanded = false
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(option.title).font(RallyType.action)
+                                    if let subtitle = option.subtitle {
+                                        Text(subtitle).font(RallyType.caption)
+                                            .foregroundStyle(selected ? RallyPalette.creamMuted : RallyPalette.inkMuted)
+                                    }
+                                }
+                                Spacer()
+                                if selected {
+                                    Circle().fill(RallyPalette.sun).frame(width: 12, height: 12)
+                                }
+                            }
+                            .foregroundStyle(selected ? RallyPalette.cream : RallyPalette.ink)
+                            .padding(.horizontal, 18)
+                            .frame(minHeight: 52)
+                            .background(selected ? RallyPalette.ink : .clear, in: Capsule())
+                        }
+                        .buttonStyle(RallyPressStyle())
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                }
+                .padding(8)
+                .background(RallyPalette.creamDeep, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
+            }
+        }
+    }
+}
+
+/// Branded date/time selection made from Rally capsules rather than the native
+/// compact DatePicker popover.
+struct RallyDateTimeSelector: View {
+    let label: String
+    @Binding var selection: Date
+    @State private var expanded = false
+
+    private let calendar = Calendar.current
+    private var dates: [Date] {
+        let start = calendar.startOfDay(for: .now)
+        return (0..<14).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+    private var times: [Int] { Array(stride(from: 7 * 60, through: 22 * 60, by: 30)) }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.82)) { expanded.toggle() }
+            } label: {
+                HStack(spacing: 12) {
+                    Text(label).font(RallyType.action)
+                    Spacer()
+                    Text(selection.formatted(.dateTime.day().month(.abbreviated)))
+                    Text(selection.formatted(.dateTime.hour().minute()))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .rotationEffect(.degrees(expanded ? 180 : 0))
+                }
+                .font(RallyType.meta)
+                .foregroundStyle(RallyPalette.ink)
+                .padding(.horizontal, 18)
+                .frame(minHeight: 56)
+                .background(RallyPalette.creamDeep, in: Capsule())
+            }
+            .buttonStyle(RallyPressStyle())
+
+            if expanded {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Choose a day").rallyEyebrow()
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(dates, id: \.self) { date in
+                                let selected = calendar.isDate(date, inSameDayAs: selection)
+                                Button { choose(date: date) } label: {
+                                    VStack(spacing: 2) {
+                                        Text(date.formatted(.dateTime.weekday(.abbreviated))).font(RallyType.caption)
+                                        Text(date.formatted(.dateTime.day())).font(RallyType.numeral(22))
+                                    }
+                                    .foregroundStyle(selected ? RallyPalette.cream : RallyPalette.ink)
+                                    .frame(width: 68, height: 58)
+                                    .background(selected ? RallyPalette.ink : .clear, in: Capsule())
+                                    .overlay(Capsule().stroke(RallyPalette.ink.opacity(selected ? 0 : 0.22), lineWidth: 1.5))
+                                }
+                                .buttonStyle(RallyPressStyle())
+                                .accessibilityAddTraits(selected ? .isSelected : [])
+                            }
+                        }
+                    }
+                    .scrollClipDisabled()
+
+                    Text("Choose a time").rallyEyebrow()
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(times, id: \.self) { minutes in
+                                let selected = isSelected(minutes: minutes)
+                                Button { choose(minutes: minutes) } label: {
+                                    Text(timeLabel(minutes))
+                                        .font(RallyType.action)
+                                        .foregroundStyle(selected ? RallyPalette.cream : RallyPalette.ink)
+                                        .padding(.horizontal, 16)
+                                        .frame(height: 46)
+                                        .background(selected ? RallyPalette.ink : .clear, in: Capsule())
+                                        .overlay(Capsule().stroke(RallyPalette.ink.opacity(selected ? 0 : 0.22), lineWidth: 1.5))
+                                }
+                                .buttonStyle(RallyPressStyle())
+                                .accessibilityAddTraits(selected ? .isSelected : [])
+                            }
+                        }
+                    }
+                    .scrollClipDisabled()
+                }
+                .padding(18)
+                .background(RallyPalette.creamDeep, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
+            }
+        }
+    }
+
+    private func choose(date: Date) {
+        let time = calendar.dateComponents([.hour, .minute], from: selection)
+        selection = calendar.date(bySettingHour: time.hour ?? 18, minute: time.minute ?? 0, second: 0, of: date) ?? selection
+    }
+
+    private func choose(minutes: Int) {
+        selection = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: selection) ?? selection
+    }
+
+    private func isSelected(minutes: Int) -> Bool {
+        calendar.component(.hour, from: selection) * 60 + calendar.component(.minute, from: selection) == minutes
+    }
+
+    private func timeLabel(_ minutes: Int) -> String {
+        let date = calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now) ?? .now
+        return date.formatted(.dateTime.hour().minute())
     }
 }

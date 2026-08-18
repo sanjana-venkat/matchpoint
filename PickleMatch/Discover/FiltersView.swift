@@ -29,22 +29,19 @@ struct FiltersView: View {
 
                 Section("Partner status") {
                     ForEach(PartnerStatus.allCases) { status in
-                        Toggle(isOn: Binding(
+                        RallyCheckbox(title: status.rawValue, isOn: Binding(
                             get: { draft.partnerStatuses.contains(status) },
                             set: { on in
                                 if on { draft.partnerStatuses.insert(status) }
                                 else { draft.partnerStatuses.remove(status) }
                             }
-                        )) {
-                            Label(status.rawValue, systemImage: status.systemImage)
-                        }
-                        .tint(app.themeColor)
+                        ))
                     }
                 }
 
                 Section("Other") {
-                    Toggle("Has own equipment", isOn: $draft.requireEquipment).tint(app.themeColor)
-                    Toggle("Tournament players only", isOn: $draft.tournamentsOnly).tint(app.themeColor)
+                    RallyCheckbox(title: "Has own equipment", isOn: $draft.requireEquipment)
+                    RallyCheckbox(title: "Tournament players only", isOn: $draft.tournamentsOnly)
                 }
 
                 Section {

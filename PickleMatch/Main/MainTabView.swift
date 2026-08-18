@@ -224,12 +224,14 @@ struct QuickChallengeSheet: View {
                 Text("Add a challenge").font(Theme.heading(29))
                 Text("Choose a player, add the format, and send the invitation in one step.")
                     .font(Theme.ui(13)).foregroundStyle(Theme.muted)
-                Picker("Player", selection: $selectedPlayerId) {
-                    Text("Select a player").tag(UUID?.none)
-                    ForEach(candidates) { Text($0.name).tag(Optional($0.id)) }
-                }
-                .pickerStyle(.menu)
-                .padding(14).background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                RallyOptionSelector(
+                    label: "Player",
+                    selection: selectedPlayerId.flatMap { app.player($0)?.name } ?? "Select a player",
+                    options: candidates.map {
+                        RallySelectorOption(id: $0.id.uuidString, title: $0.name, subtitle: "\($0.rating(app.activeSport)) rating")
+                    },
+                    select: { selectedPlayerId = UUID(uuidString: $0.id) }
+                )
                 TextField("Challenge details", text: $note, axis: .vertical)
                     .lineLimit(3...6)
                     .padding(14).background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))

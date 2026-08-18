@@ -479,7 +479,7 @@ private struct NativeHomeScreen: View {
     }
 
     private var challengeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 12) {
             MPSectionHeader(title: app.activeSport.category == .group ? "Upcoming fixtures" : "Challenges", action: app.activeSport.category == .group ? "Calendar" : "See all")
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -624,6 +624,10 @@ private struct CommunityPoster: View {
     }
 }
 
+private enum NativeMapFilterPanel: Hashable {
+    case audience, gender, rating
+}
+
 private struct NativeMapScreen: View {
     @EnvironmentObject private var app: AppState
     @State private var camera: MapCameraPosition = .region(.init(center: .init(latitude: 30.2672, longitude: -97.7431), span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
@@ -631,6 +635,7 @@ private struct NativeMapScreen: View {
     @State private var rating = "Any rating"
     @State private var audience = "Everyone"
     @State private var selected: Player?
+    @State private var activeFilter: NativeMapFilterPanel?
 
     private var players: [Player] {
         app.players.filter { player in
@@ -681,28 +686,30 @@ private struct NativeMapScreen: View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea(edges: .bottom)
 
-            HStack(spacing: 6) {
-                Menu {
-                    Button("Everyone") { audience = "Everyone" }
-                    Button("Friends") { audience = "Friends" }
-                } label: { filterChip(audience, icon: "person.2", width: 106) }
-                Menu {
-                    Button("Any gender") { gender = nil }
-                    ForEach(Gender.allCases) { value in Button(value.rawValue) { gender = value } }
-                } label: { filterChip(gender?.rawValue ?? "Gender", icon: "person", width: 88) }
-                Menu {
-                    ForEach(["Any rating", "Under 80", "80 to 110", "Above 110"], id: \.self) { value in Button(value) { rating = value } }
-                } label: { filterChip(rating == "Any rating" ? "Rating" : rating, icon: "bolt", width: 88) }
-                Button("Clear") { audience = "Everyone"; gender = nil; rating = "Any rating" }
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    filterButton(.audience, text: audience, icon: "person.2", width: 106)
+                    filterButton(.gender, text: gender?.rawValue ?? "Gender", icon: "person", width: 88)
+                    filterButton(.rating, text: rating == "Any rating" ? "Rating" : rating, icon: "bolt", width: 88)
+                    Button("Clear") {
+                        audience = "Everyone"; gender = nil; rating = "Any rating"; activeFilter = nil
+                    }
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(audience == "Everyone" && gender == nil && rating == "Any rating" ? MP.ink3 : MP.ink)
                     .lineLimit(1)
                     .frame(width: 56, height: 44).background(MP.background, in: Capsule())
                     .overlay(Capsule().stroke(MP.line, lineWidth: 1))
                     .disabled(audience == "Everyone" && gender == nil && rating == "Any rating")
+                }
+
+                if let activeFilter {
+                    filterPanel(activeFilter)
+                        .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 76)
+            .animation(.spring(response: 0.34, dampingFraction: 0.82), value: activeFilter)
         }
         .sheet(item: $selected) { player in
             ProfileDetailView(player: player).presentationDetents([.medium, .large])
@@ -715,17 +722,79 @@ private struct NativeMapScreen: View {
         return .init(latitude: 30.2672 + pair.0, longitude: -97.7431 + pair.1)
     }
 
-    private func filterChip(_ text: String, icon: String, width: CGFloat) -> some View {
+    private func filterButton(_ panel: NativeMapFilterPanel, text: String, icon: String, width: CGFloat) -> some View {
+        Button {
+            activeFilter = activeFilter == panel ? nil : panel
+        } label: {
+            filterChip(text, icon: icon, width: width, expanded: activeFilter == panel)
+        }
+        .buttonStyle(RallyPressStyle())
+    }
+
+    private func filterChip(_ text: String, icon: String, width: CGFloat, expanded: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
             Text(text)
-            Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(MP.ink3)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(MP.ink3)
+                .rotationEffect(.degrees(expanded ? 180 : 0))
         }
         .font(.system(size: 11.5, weight: .semibold)).foregroundStyle(MP.ink)
         .lineLimit(1)
         .minimumScaleFactor(0.78)
         .padding(.horizontal, 8).frame(width: width).frame(height: 44).background(MP.background, in: Capsule())
         .overlay(Capsule().stroke(MP.line, lineWidth: 1)).shadow(color: MP.shadow, radius: 4, y: 1)
+    }
+
+    @ViewBuilder private func filterPanel(_ panel: NativeMapFilterPanel) -> some View {
+        let options: [String] = switch panel {
+        case .audience: ["Everyone", "Friends"]
+        case .gender: ["Any gender"] + Gender.allCases.map(\.rawValue)
+        case .rating: ["Any rating", "Under 80", "80 to 110", "Above 110"]
+        }
+
+        VStack(spacing: 4) {
+            ForEach(options, id: \.self) { option in
+                let selected = selectedOption(panel) == option
+                Button {
+                    apply(option, to: panel)
+                    activeFilter = nil
+                } label: {
+                    HStack {
+                        Text(option).font(RallyType.action)
+                        Spacer()
+                        if selected { Circle().fill(MP.orange).frame(width: 12, height: 12) }
+                    }
+                    .foregroundStyle(selected ? MP.background : MP.ink)
+                    .padding(.horizontal, 18)
+                    .frame(height: 50)
+                    .background(selected ? MP.ink : .clear, in: Capsule())
+                }
+                .buttonStyle(RallyPressStyle())
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(8)
+        .frame(width: 238)
+        .background(MP.background, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+        .rallyLifted(0.7)
+    }
+
+    private func selectedOption(_ panel: NativeMapFilterPanel) -> String {
+        switch panel {
+        case .audience: audience
+        case .gender: gender?.rawValue ?? "Any gender"
+        case .rating: rating
+        }
+    }
+
+    private func apply(_ option: String, to panel: NativeMapFilterPanel) {
+        switch panel {
+        case .audience: audience = option
+        case .gender: gender = option == "Any gender" ? nil : Gender.allCases.first { $0.rawValue == option }
+        case .rating: rating = option
+        }
     }
 }
 
@@ -1324,7 +1393,10 @@ private struct NativeProfileScreen: View {
     }
 
     private var ratingTrend: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let ratings = app.ratingHistory.map(\.rating)
+        let lowerBound = (ratings.min() ?? 80) - 4
+        let upperBound = (ratings.max() ?? 100) + 4
+        return VStack(alignment: .leading, spacing: 12) {
             MPSectionHeader(title: "Rating trend")
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .firstTextBaseline) {
@@ -1338,13 +1410,25 @@ private struct NativeProfileScreen: View {
                     LineMark(x: .value("Date", point.date), y: .value("Rating", point.rating))
                         .foregroundStyle(MP.ink)
                         .lineStyle(.init(lineWidth: 2.4, lineCap: .round))
-                    PointMark(x: .value("Date", point.date), y: .value("Rating", point.rating))
-                        .foregroundStyle(MP.orange)
-                        .symbolSize(18)
+                        .interpolationMethod(.catmullRom)
+                    if point.date == app.ratingHistory.last?.date {
+                        PointMark(x: .value("Date", point.date), y: .value("Rating", point.rating))
+                            .foregroundStyle(MP.orange)
+                            .symbolSize(72)
+                    }
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis(.hidden)
-                .frame(height: 104)
+                .chartYScale(domain: lowerBound...upperBound)
+                .frame(height: 92)
+
+                HStack {
+                    Text("\(ratings.first ?? 0) starting")
+                    Spacer()
+                    Text("\(ratings.last ?? 0) now")
+                }
+                .font(RallyType.caption)
+                .foregroundStyle(MP.ink3)
             }
             .padding(20)
             .background(MP.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
@@ -1503,7 +1587,13 @@ private struct NativeScoreSheet: View {
                     if format == "Doubles" {
                         MPCard { HStack { Image(systemName: "person.2"); Text("Choose your partner and two opponents").font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: "chevron.right") } }
                     }
-                    HStack { Text("MATCHES PLAYED").font(.system(size: 11, weight: .heavy)).tracking(0.8).foregroundStyle(MP.ink3); Spacer(); Stepper("\(matches)", value: $matches, in: 1...5).labelsHidden(); Text("\(matches)").font(.system(size: 15, weight: .bold)) }
+                    HStack(spacing: 12) {
+                        Text("MATCHES PLAYED").font(.system(size: 11, weight: .heavy)).tracking(0.8).foregroundStyle(MP.ink3)
+                        Spacer()
+                        matchCountButton("minus") { matches = max(1, matches - 1) }
+                        Text("\(matches)").font(RallyType.numeral(24)).frame(minWidth: 28)
+                        matchCountButton("plus") { matches = min(5, matches + 1) }
+                    }
                     ForEach(0..<matches, id: \.self) { index in
                         MPCard {
                             VStack(alignment: .leading, spacing: 10) {
@@ -1525,6 +1615,16 @@ private struct NativeScoreSheet: View {
 
     private func winner(_ index: Int) -> Int { winners.indices.contains(index) ? winners[index] : 0 }
     private func setWinner(_ value: Int, _ index: Int) { while winners.count <= index { winners.append(0) }; winners[index] = value }
+    private func matchCountButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(MP.background)
+                .frame(width: 42, height: 42)
+                .background(MP.ink, in: Circle())
+        }
+        .buttonStyle(RallyPressStyle())
+    }
     private func winnerButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.system(size: 12, weight: .bold)).foregroundStyle(selected ? MP.black : MP.ink2).frame(maxWidth: .infinity).frame(height: 44).background(selected ? MP.accent(app.activeSport) : MP.surface2, in: RoundedRectangle(cornerRadius: 12)) }
     }
@@ -1587,16 +1687,15 @@ private struct GroupFixtureSheet: View {
                 Text("Add a \(app.activeSport.title) fixture to your shared calendar.")
                     .font(RallyType.body())
                     .foregroundStyle(RallyPalette.inkMuted)
-                Picker("Player or captain", selection: $playerId) {
-                    Text("Choose a player").tag(UUID?.none)
-                    ForEach(app.players.filter { $0.profile(app.activeSport) != nil }) {
-                        Text($0.name).tag(Optional($0.id))
-                    }
-                }
-                .padding(16).background(RallyPalette.creamDeep, in: Capsule())
-                DatePicker("Date and time", selection: $date, in: Date()...)
-                    .font(RallyType.meta)
-                    .padding(16).background(RallyPalette.creamDeep, in: RallySquircle(radius: 20))
+                RallyOptionSelector(
+                    label: "Player or captain",
+                    selection: playerId.flatMap { app.player($0)?.name } ?? "Choose a player",
+                    options: app.players.filter { $0.profile(app.activeSport) != nil }.map {
+                        RallySelectorOption(id: $0.id.uuidString, title: $0.name, subtitle: "\($0.rating(app.activeSport)) rating")
+                    },
+                    select: { playerId = UUID(uuidString: $0.id) }
+                )
+                RallyDateTimeSelector(label: "Date and time", selection: $date)
                 TextField("Venue", text: $venue)
                     .font(RallyType.body())
                     .padding(16).background(RallyPalette.creamDeep, in: Capsule())

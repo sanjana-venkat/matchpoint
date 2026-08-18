@@ -1,21 +1,20 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
-/// Social story → up to four sports → per-sport setup → availability → identity.
+/// Social story → up to four sports → per-sport setup → identity.
 struct OnboardingFlowView: View {
     @EnvironmentObject private var app: AppState
 
     @State private var me = MockData.emptyMe()
     @State private var selectedSports: [Sport] = []
     @State private var profiles: [Sport: SportProfile] = [:]
-    @State private var availability: [AvailabilitySlot] = []
     @State private var step: Int
 
     private let sportsSetupStep = 4
-    private let availabilityStep = 5
-    private let detailsStep = 6
-    private let welcomeStep = 7
-    private let totalSteps = 8
+    private let detailsStep = 5
+    private let welcomeStep = 6
+    private let totalSteps = 7
 
     init() {
 #if DEBUG
@@ -24,6 +23,13 @@ struct OnboardingFlowView: View {
            arguments.indices.contains(flag + 1),
            let requested = Int(arguments[flag + 1]) {
             _step = State(initialValue: max(0, requested))
+            if requested >= 4 {
+                let previewSports: [Sport] = [.pickleball, .badminton, .soccer]
+                _selectedSports = State(initialValue: previewSports)
+                _profiles = State(initialValue: Dictionary(uniqueKeysWithValues: previewSports.map { sport in
+                    (sport, SportProfile(sport: sport))
+                }))
+            }
         } else {
             _step = State(initialValue: 0)
         }
@@ -51,8 +57,6 @@ struct OnboardingFlowView: View {
                         profiles: $profiles,
                         onContinue: next
                     )
-                case availabilityStep:
-                    AvailabilitySetupStep(availability: $availability, onContinue: next)
                 case detailsStep:
                     IdentitySetupStep(me: $me, onFinish: finish)
                 default:
@@ -108,7 +112,6 @@ struct OnboardingFlowView: View {
     }
 
     private func finish() {
-        me.availability = availability
         me.profiles = profiles
         app.me = me
         app.mySports = selectedSports
@@ -134,9 +137,9 @@ private struct OnboardingNavigation: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(canGoBack ? Theme.ink : Theme.muted.opacity(0.45))
-                    .frame(width: 38, height: 38)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.hairline, lineWidth: 1))
+                    .frame(width: 42, height: 42)
+                    .background(Theme.surface, in: Circle())
+                    .overlay(Circle().stroke(Theme.hairline, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .disabled(!canGoBack)
@@ -166,9 +169,9 @@ private struct ConsolidatedSportsSetupStep: View {
     var body: some View {
         VStack(spacing: 0) {
             FlowHeader(
-                kicker: "Sports setup",
-                title: "Set up all your sports.",
-                detail: "Choose whether rated individual play is right for you. Team-sport skills are rated by verified peers after play."
+                kicker: "Set up your sports",
+                title: "Configure each sport.",
+                detail: "Individual sports use the MP Rating. Group sports run on a shared calendar and are evaluated by the people who play alongside you."
             )
             .padding(20)
 
@@ -182,7 +185,7 @@ private struct ConsolidatedSportsSetupStep: View {
                 .padding(.bottom, 12)
             }
 
-            FlowCTA(title: "Set availability", action: onContinue)
+            FlowCTA(title: "Continue to profile", action: onContinue)
                 .padding(20)
                 .background(Theme.bg)
         }
@@ -213,18 +216,20 @@ private struct ConsolidatedSportsSetupStep: View {
                     Spacer()
                 }
 
-                Toggle("I want to opt out of the rating system", isOn: binding(for: sport).ratingOptOut)
-                    .font(Theme.ui(13, weight: .bold))
-                    .tint(Theme.signal)
+                RallyCheckbox(
+                    title: "I want to opt out of the rating system",
+                    isOn: binding(for: sport).ratingOptOut
+                )
 
                 VStack(alignment: .leading, spacing: 3) {
+                    Text("Everyone starts at 80, and the rating moves in small, honest steps after verified rated matches.")
                     Text("Only verified rated matches change your starting rating.")
                     Text("Games with unrated opponents remain unrated for everyone.")
                 }
                 .font(Theme.ui(11))
                 .foregroundStyle(Theme.muted)
             } else {
-                Text("Group sports do not use a numerical rating. After verified games, peers can rate the skills that matter in \(sport.title).")
+                Text("Group sports do not use a numerical player rating. Fixtures live on a shared calendar, and verified teammates and opponents can evaluate the skills that matter in \(sport.title) after play.")
                     .font(Theme.ui(12))
                     .foregroundStyle(Theme.muted)
                     .lineSpacing(3)
@@ -331,57 +336,116 @@ private struct WelcomeStory: View {
 
     private let pages = [
         WelcomePage(
-            title: "Find people\nto play with.",
-            body: "Meet nearby players and make the group chat real.",
-            kicker: "Play together"
+            title: "Discover local\nsports partners.",
+            body: "Match Point connects you with players a few streets away who play the sports you play. Browse the neighbourhood, meet people on court, and build a regular group you look forward to seeing every week.",
+            kicker: "Find your people"
         ),
         WelcomePage(
-            title: "Make a plan.\nMeet on court.",
-            body: "See when everyone is free and lock in a game.",
-            kicker: "Easy scheduling"
+            title: "Play people\nat your level.",
+            body: "Individual sports use the MP Rating, a single number that moves in small, honest steps. Beat someone stronger and you climb faster. Group sports skip the number entirely and rely on peer skill evaluations from the people who played beside you.",
+            kicker: "Fair matchmaking"
         ),
         WelcomePage(
-            title: "Play. Track.\nGo again.",
-            body: "Choose casual play or count the result toward your rating.",
-            kicker: "Your game, your call"
+            title: "Challenge, play,\nlog the score.",
+            body: "In individual sports you send a challenge, play the match, and upload the score for your opponent to verify. In group sports you keep a shared calendar of fixtures and rate each other afterwards, because a squad needs a schedule far more than it needs a ladder.",
+            kicker: "Stay organised"
         )
     ]
 
     var body: some View {
         GeometryReader { proxy in
             let item = pages[page]
-            VStack(alignment: .leading, spacing: 0) {
-                MultiSportSocialHero(variant: page)
-                    .frame(height: min(390, proxy.size.height * 0.43))
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 28))
-                    .padding(.horizontal, 16)
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        MultiSportSocialHero(variant: page)
+                            .frame(height: min(330, proxy.size.height * 0.36))
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(item.kicker.uppercased())
-                        .font(Theme.ui(11, weight: .bold))
-                        .tracking(1.4)
-                        .foregroundStyle(Theme.muted)
-                    Text(item.title)
-                        .font(Theme.heading(31))
-                        .tracking(-0.7)
-                        .lineSpacing(-1)
-                    Text(item.body)
-                        .font(Theme.ui(14))
-                        .foregroundStyle(Theme.muted)
-                        .lineSpacing(3)
-
-                    Spacer(minLength: 10)
-
-                    FlowCTA(
-                        title: page == 2 ? "Choose my sports" : "Next",
-                        action: onContinue
-                    )
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(item.kicker.uppercased())
+                                .font(Theme.ui(11, weight: .bold))
+                                .tracking(1.4)
+                                .foregroundStyle(Theme.muted)
+                            Text(item.title)
+                                .font(Theme.heading(31))
+                                .tracking(-0.7)
+                                .lineSpacing(-1)
+                            Text(item.body)
+                                .font(Theme.ui(15))
+                                .foregroundStyle(Theme.muted)
+                                .lineSpacing(4)
+                            supportingContent
+                        }
+                        .padding(.top, 18)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
                 }
+
+                FlowCTA(
+                    title: page == 2 ? "Choose my sports" : "Continue",
+                    action: onContinue
+                )
                 .padding(20)
-                .padding(.bottom, 8)
+                .background(Theme.bg)
             }
         }
+    }
+
+    @ViewBuilder private var supportingContent: some View {
+        if page == 0 {
+            VStack(alignment: .leading, spacing: 0) {
+                storyRow("01", "Players near you", "See who is playing inside your radius.")
+                Divider().overlay(Theme.hairline)
+                storyRow("02", "Local communities", "Join groups that already play your sports.")
+                Divider().overlay(Theme.hairline)
+                storyRow("03", "Friendly competition", "Track progress without losing the fun.")
+            }
+            .padding(.top, 12)
+        } else if page == 1 {
+            VStack(spacing: 0) {
+                ratingRow("Even opponent", "+1 to +2 points")
+                Divider().overlay(Theme.hairline)
+                ratingRow("Stronger opponent", "+3 points")
+                Divider().overlay(Theme.hairline)
+                ratingRow("Significant upset", "+4 to +5 points")
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private func storyRow(_ number: String, _ title: String, _ detail: String) -> some View {
+        HStack(spacing: 14) {
+            Text(number)
+                .font(RallyType.numeral(14))
+                .foregroundStyle(RallyPalette.ink)
+                .frame(width: 38, height: 38)
+                .background(RallyPalette.sun, in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(RallyType.body(15, weight: .bold))
+                Text(detail).font(RallyType.caption).foregroundStyle(Theme.muted)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 13)
+    }
+
+    private func ratingRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).foregroundStyle(Theme.muted)
+            Spacer()
+            Text(value)
+                .fontWeight(.bold)
+                .foregroundStyle(RallyPalette.ink)
+                .padding(.horizontal, 12)
+                .frame(height: 34)
+                .background(RallyPalette.sun, in: Capsule())
+        }
+        .font(RallyType.body(14))
+        .padding(.vertical, 13)
     }
 }
 
@@ -416,7 +480,8 @@ private struct SportSelectionStep: View {
         VStack(spacing: 0) {
             FlowHeader(
                 kicker: "Your sports",
-                title: "Choose up to four."
+                title: "Pick up to four sports.",
+                detail: "Every sport has its own mode, match history, and player community. You can change your active sport at any time."
             )
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -507,7 +572,7 @@ private struct PerSportSetupStep: View {
                 }
             }
 
-            FlowCTA(title: position == total ? "Set availability" : "Next sport", accent: accent, action: onContinue)
+            FlowCTA(title: position == total ? "Continue to profile" : "Next sport", accent: accent, action: onContinue)
                 .padding(20)
                 .background(Theme.bg)
         }
@@ -579,46 +644,14 @@ private struct PerSportSetupStep: View {
     }
 }
 
-// MARK: - Availability and identity
-
-private struct AvailabilitySetupStep: View {
-    @Binding var availability: [AvailabilitySlot]
-    let onContinue: () -> Void
-    @State private var mode: AvailabilityEditorMode = .everyWeek
-
-    private var activeWindows: [AvailabilitySlot] {
-        availability.filter { mode == .everyWeek ? $0.isWeekly : !$0.isWeekly }
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            FlowHeader(
-                kicker: "Shared availability",
-                title: "When can you play?"
-            )
-            .padding(20)
-
-            ScrollView {
-                AvailabilityScheduleEditor(slots: $availability, mode: $mode)
-                    .padding(.horizontal, 20)
-            }
-
-            FlowCTA(
-                title: activeWindows.isEmpty ? "Choose at least one window" : "Save \(activeWindows.count) windows",
-                enabled: !activeWindows.isEmpty,
-                action: onContinue
-            )
-            .padding(20)
-            .background(Theme.bg)
-        }
-    }
-}
+// MARK: - Identity
 
 private struct IdentitySetupStep: View {
     @Binding var me: Player
     let onFinish: () -> Void
     @FocusState private var focus: Field?
     @State private var photoItem: PhotosPickerItem?
+    @State private var selectedPhotoData: Data?
     @State private var showCameraNote = false
     private enum Field { case name, username, age }
 
@@ -636,26 +669,52 @@ private struct IdentitySetupStep: View {
                     title: "Create your profile."
                 )
 
-                HStack(spacing: 10) {
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label("Photo library", systemImage: "photo.on.rectangle")
-                            .font(Theme.ui(12, weight: .bold))
-                            .frame(maxWidth: .infinity, minHeight: 48)
-                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle().fill(Theme.surface2)
+                        if let selectedPhotoData,
+                           let image = UIImage(data: selectedPhotoData) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .clipShape(Circle())
+                        } else {
+                            VStack(spacing: 7) {
+                                Image(systemName: "camera")
+                                    .font(.system(size: 28, weight: .medium))
+                                Text("Add photo")
+                                    .font(RallyType.caption)
+                            }
+                            .foregroundStyle(Theme.muted)
+                        }
                     }
-                    Button { showCameraNote = true } label: {
-                        Label("Camera", systemImage: "camera.fill")
-                            .font(Theme.ui(12, weight: .bold))
-                            .frame(maxWidth: .infinity, minHeight: 48)
-                            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                    .frame(width: 126, height: 126)
+                    .overlay(Circle().stroke(Theme.ink, lineWidth: 2))
+                    .overlay(alignment: .bottomTrailing) {
+                        Circle()
+                            .fill(RallyPalette.sun)
+                            .frame(width: 34, height: 34)
+                            .overlay(
+                                Image(systemName: "plus")
+                                    .font(.system(size: 14, weight: .black))
+                                    .foregroundStyle(RallyPalette.ink)
+                            )
+                            .overlay(Circle().stroke(Theme.bg, lineWidth: 3))
+                    }
+
+                    HStack(spacing: 10) {
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            photoActionLabel("Photo library", icon: "photo.on.rectangle", primary: true)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button { showCameraNote = true } label: {
+                            photoActionLabel("Camera", icon: "camera", primary: false)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .foregroundStyle(Theme.ink)
-
-                Text("Or choose from \(Avatar.all.count) avatars")
-                    .font(Theme.ui(11, weight: .bold))
-                    .foregroundStyle(Theme.muted)
-                AvatarChoiceStrip(selection: $me.avatar, size: 62)
+                .frame(maxWidth: .infinity)
 
                 VStack(spacing: 12) {
                     TextField("Full name", text: $me.name)
@@ -695,11 +754,56 @@ private struct IdentitySetupStep: View {
             .padding(20)
         }
         .onAppear { focus = .name }
-        .alert("Camera prototype", isPresented: $showCameraNote) {
-            Button("Continue", role: .cancel) {}
-        } message: {
-            Text("On a physical device, this action opens the camera so you can take a profile photo.")
+        .onChange(of: photoItem) { _, item in
+            Task { selectedPhotoData = try? await item?.loadTransferable(type: Data.self) }
         }
+        .overlay {
+            if showCameraNote {
+                ZStack {
+                    RallyPalette.ink.opacity(0.32).ignoresSafeArea()
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Text("Take a profile photo")
+                                .font(RallyType.cardTitle)
+                            Spacer()
+                            Button { showCameraNote = false } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 14, weight: .black))
+                                    .frame(width: 42, height: 42)
+                                    .background(RallyPalette.creamDeep, in: Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Text("Camera capture opens on a physical device. In the simulator, choose an image from the photo library to preview the finished profile.")
+                            .font(RallyType.body(15))
+                            .foregroundStyle(Theme.muted)
+                            .lineSpacing(3)
+                        Button { showCameraNote = false } label: {
+                            Text("Got it")
+                                .font(RallyType.action)
+                                .foregroundStyle(RallyPalette.cream)
+                                .frame(maxWidth: .infinity, minHeight: 54)
+                                .background(RallyPalette.ink, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(22)
+                    .background(RallyPalette.cream, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                    .padding(24)
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+
+    private func photoActionLabel(_ title: String, icon: String, primary: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 15, weight: .bold))
+            Text(title).font(RallyType.action)
+        }
+        .foregroundStyle(primary ? RallyPalette.cream : RallyPalette.ink)
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .background(primary ? RallyPalette.ink : RallyPalette.sun, in: Capsule())
     }
 
 }

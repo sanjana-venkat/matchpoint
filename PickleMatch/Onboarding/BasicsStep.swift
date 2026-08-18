@@ -26,15 +26,27 @@ struct BasicsStep: View {
                     }
 
                     field("Age") {
-                        Stepper("\(me.age) years", value: $me.age, in: 13...99)
+                        HStack {
+                            Text("\(me.age) years").font(RallyType.meta)
+                            Spacer()
+                            ageButton("minus") { me.age = max(13, me.age - 1) }
+                            ageButton("plus") { me.age = min(99, me.age + 1) }
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Gender").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                        Picker("Gender", selection: $me.gender) {
-                            ForEach(Gender.allCases) { Text($0.rawValue).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
+                        MinimalChoiceBar(
+                            options: Gender.allCases.map(\.rawValue),
+                            selection: Binding(
+                                get: { me.gender.rawValue },
+                                set: { value in
+                                    if let gender = Gender.allCases.first(where: { $0.rawValue == value }) {
+                                        me.gender = gender
+                                    }
+                                }
+                            )
+                        )
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -52,9 +64,19 @@ struct BasicsStep: View {
     private func field<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            content().padding().background(Color(.secondarySystemBackground),
-                                            in: RoundedRectangle(cornerRadius: 12))
+            content().padding().background(Theme.surface2, in: Capsule())
         }
+    }
+
+    private func ageButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(RallyPalette.cream)
+                .frame(width: 42, height: 42)
+                .background(RallyPalette.ink, in: Circle())
+        }
+        .buttonStyle(RallyPressStyle())
     }
 }
 
