@@ -76,8 +76,8 @@ struct ConversationsView: View {
             .sorbetScreen()
             .sheet(isPresented: $showGroupComposer) {
                 GroupChatComposer()
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.hidden)
                     .presentationBackground(Theme.bg)
             }
             .sheet(item: $selectedProfile) { player in
@@ -275,25 +275,31 @@ struct GroupChatComposer: View {
     }
 
     var body: some View {
-        NavigationStack {
+        ZStack(alignment: .topTrailing) {
+            RallyPalette.cream.ignoresSafeArea()
+
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Build a court crew")
-                        .font(Theme.heading(27))
+                        .font(RallyType.hero)
+                        .rallyDisplayLeading()
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("Choose at least two players. The chat will automatically look for your next shared opening.")
-                        .font(Theme.ui(12))
+                        .font(RallyType.body())
                         .foregroundStyle(Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.trailing, 48)
 
                 TextField("Group name", text: $name)
-                    .font(Theme.ui(14, weight: .bold))
-                    .padding(.horizontal, 14)
-                    .frame(height: 48)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 16))
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.hairline, lineWidth: 1))
+                    .font(RallyType.body())
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 18)
+                    .frame(height: 54)
+                    .background(Theme.surface2, in: Capsule())
 
                 ScrollView {
-                    LazyVStack(spacing: 9) {
+                    LazyVStack(spacing: 4) {
                         ForEach(candidates) { player in
                             Button {
                                 if selected.contains(player.id) {
@@ -303,24 +309,34 @@ struct GroupChatComposer: View {
                                 }
                             } label: {
                                 HStack(spacing: 11) {
-                                    AvatarView(avatar: player.avatar, size: 42)
+                                    RallyPlayerAvatar(player: player, size: 52)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(player.name)
-                                            .font(Theme.ui(13, weight: .bold))
+                                            .font(RallyType.action)
                                         Text("\(player.rating(app.activeSport)) rating · \(player.distanceMiles, specifier: "%.1f") mi")
-                                            .font(Theme.ui(10))
+                                            .font(RallyType.caption)
                                             .foregroundStyle(Theme.muted)
                                     }
                                     Spacer()
-                                    Image(systemName: selected.contains(player.id) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(selected.contains(player.id) ? Theme.accent : Theme.hairline)
-                                        .font(.title3)
+                                    ZStack {
+                                        Circle()
+                                            .fill(selected.contains(player.id) ? RallyPalette.sun : .clear)
+                                        Circle()
+                                            .stroke(RallyPalette.ink.opacity(selected.contains(player.id) ? 1 : 0.45), lineWidth: 2)
+                                        if selected.contains(player.id) {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundStyle(RallyPalette.ink)
+                                        }
+                                    }
+                                    .frame(width: 28, height: 28)
                                 }
                                 .foregroundStyle(Theme.ink)
-                                .padding(10)
-                                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 17))
+                                .padding(.vertical, 10)
+                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(RallyPressStyle())
+                            .accessibilityAddTraits(selected.contains(player.id) ? .isSelected : [])
                         }
                     }
                 }
@@ -335,21 +351,23 @@ struct GroupChatComposer: View {
                         Text("\(selected.count) players")
                         Image(systemName: "arrow.right")
                     }
-                    .font(Theme.ui(14, weight: .bold))
-                    .foregroundStyle(Theme.bg)
+                    .font(RallyType.action)
+                    .foregroundStyle(selected.count >= 2 ? Theme.bg : Theme.ink.opacity(0.48))
                     .padding(.horizontal, 18)
                     .frame(height: 54)
-                    .background(selected.count >= 2 ? Theme.accent : Theme.hairline, in: Capsule())
+                    .background(selected.count >= 2 ? Theme.ink : Theme.surface2, in: Capsule())
                 }
+                .buttonStyle(RallyPressStyle())
                 .disabled(selected.count < 2)
             }
-            .padding(20)
+            .padding(.horizontal, RallyLayout.gutter)
+            .padding(.top, 30)
+            .padding(.bottom, 20)
             .background(Theme.bg)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    CloseIconButton { dismiss() }
-                }
-            }
+
+            CloseIconButton { dismiss() }
+                .padding(.top, 24)
+                .padding(.trailing, RallyLayout.gutter)
         }
         .preferredColorScheme(.light)
     }

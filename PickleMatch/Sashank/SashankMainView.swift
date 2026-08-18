@@ -352,30 +352,38 @@ private struct NativeHomeScreen: View {
     private var players: [Player] { app.players.filter { $0.profile(app.activeSport) != nil } }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                hero
-                homeSection("Verifications", action: "3 waiting", items: Array(players.prefix(3))) { player, index in
-                    PersonPoster(player: player, sport: app.activeSport, line1: index.isMultiple(of: 2) ? "Singles · 2–1 games" : "Doubles · 1–2 games", line2: "Aug \(10 - index), 2026", badge: "Verify", badgeColor: MP.orange)
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    hero
+                    homeSection("Verifications", action: "3 waiting", items: Array(players.prefix(3))) { player, index in
+                        PersonPoster(player: player, sport: app.activeSport, line1: index.isMultiple(of: 2) ? "Singles · 2–1 games" : "Doubles · 1–2 games", line2: "Aug \(10 - index), 2026", badge: "Verify", badgeColor: MP.orange)
+                    }
+                    homeSection("Connection requests", action: "See all", items: Array(players.dropFirst(3).prefix(4))) { player, _ in
+                        PersonPoster(player: player, sport: app.activeSport, line1: "\(String(format: "%.1f", player.distanceMiles)) miles away", line2: "Recently active", badge: "Wants to connect", badgeColor: MP.accent(app.activeSport))
+                    }
+                    challengeSection
+                    homeSection(app.activeSport.category == .group ? "Players in your area" : "Recommended opponents", action: "Open map", items: Array(players.dropFirst(1).prefix(8))) { player, _ in
+                        PersonPoster(player: player, sport: app.activeSport, line1: "\(String(format: "%.1f", player.distanceMiles)) miles away", line2: app.activeSport.category == .individual ? "MP Rating \(player.rating(app.activeSport))" : "Peer rated", badge: nil, badgeColor: MP.accent(app.activeSport))
+                    }
+                    communitySection.id("community")
+                    Color.clear.frame(height: 150)
                 }
-                homeSection("Connection requests", action: "See all", items: Array(players.dropFirst(3).prefix(4))) { player, _ in
-                    PersonPoster(player: player, sport: app.activeSport, line1: "\(String(format: "%.1f", player.distanceMiles)) miles away", line2: "Recently active", badge: "Wants to connect", badgeColor: MP.accent(app.activeSport))
-                }
-                challengeSection
-                homeSection(app.activeSport.category == .group ? "Players in your area" : "Recommended opponents", action: "Open map", items: Array(players.dropFirst(1).prefix(8))) { player, _ in
-                    PersonPoster(player: player, sport: app.activeSport, line1: "\(String(format: "%.1f", player.distanceMiles)) miles away", line2: app.activeSport.category == .individual ? "MP Rating \(player.rating(app.activeSport))" : "Peer rated", badge: nil, badgeColor: MP.accent(app.activeSport))
-                }
-                communitySection
-                Color.clear.frame(height: 150)
             }
-        }
-        .sheet(item: $selectedPlayer) { ProfileDetailView(player: $0) }
-        .onAppear {
+            .sheet(item: $selectedPlayer) { ProfileDetailView(player: $0) }
+            .onAppear {
 #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-demo-player-sheet") {
-                selectedPlayer = players.first
-            }
+                let arguments = ProcessInfo.processInfo.arguments
+                if arguments.contains("-demo-player-sheet") {
+                    selectedPlayer = players.first
+                }
+                if arguments.contains("-demo-community") {
+                    DispatchQueue.main.async {
+                        proxy.scrollTo("community", anchor: .top)
+                    }
+                }
 #endif
+            }
         }
     }
 
@@ -519,6 +527,14 @@ private struct NativeCommunity: Identifiable {
     let kind: String
     let meta: String
 
+    var imageName: String {
+        switch kind {
+        case "Club", "Ladder": "Rally-motif-together"
+        case "Facility": "Rally-scene-paddles"
+        default: "Rally-scene-court"
+        }
+    }
+
     static func forSport(_ sport: Sport) -> [NativeCommunity] {
         switch sport {
         case .pickleball:
@@ -539,31 +555,44 @@ private struct CommunityPoster: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .topLeading) {
-                RallyPhoto(name: "Rally-scene-court").clipped().overlay(RallyPalette.photoScrim)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(community.kind).rallyEyebrow(MP.ink)
-                        .padding(.horizontal, 10).frame(height: 25).background(MP.orange, in: Capsule())
-                    Spacer()
-                    HStack(spacing: 5) {
-                        ForEach(0..<3) { _ in Circle().fill(.white.opacity(0.82)).frame(width: 17, height: 17) }
-                    }
-                }
-                .padding(12)
+                RallyPhoto(name: community.imageName)
+                    .frame(width: 272, height: 164)
+                    .clipped()
+                Text(community.kind)
+                    .rallyEyebrow(MP.ink)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .background(MP.orange, in: Capsule())
+                    .padding(14)
             }
-            .frame(height: 132)
-            VStack(alignment: .leading, spacing: 6) {
-                Text(community.name).font(.system(size: 15.5, weight: .bold)).lineLimit(1)
-                Text(community.meta).font(.system(size: 12)).foregroundStyle(MP.ink3).lineLimit(1)
+            .frame(width: 272, height: 164)
+            .clipped()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(community.name)
+                    .font(RallyType.cardTitle)
+                    .foregroundStyle(MP.ink)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(community.meta)
+                    .font(RallyType.caption)
+                    .foregroundStyle(MP.ink3)
+                    .lineLimit(1)
+                Spacer(minLength: 2)
                 Text(community.kind == "Facility" ? "View facility" : (community.kind == "Club" ? "Join community" : "Join league"))
                     .font(RallyType.action).foregroundStyle(MP.background)
-                    .frame(maxWidth: .infinity).frame(height: 44)
+                    .frame(maxWidth: .infinity).frame(height: 50)
                     .background(MP.ink, in: Capsule())
             }
-            .padding(13)
+            .padding(16)
         }
-        .frame(width: 260, height: 260)
-        .background(MP.surface).clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 28).stroke(MP.strongLine, lineWidth: 1))
+        .frame(width: 272, height: 350)
+        .background(MP.surface)
+        .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous)
+                .stroke(MP.strongLine, lineWidth: 1)
+        }
     }
 }
 
@@ -665,7 +694,6 @@ private struct NativeMatchesScreen: View {
     let openProfile: () -> Void
     @State private var segment = "Upcoming"
     @State private var selected: MatchRecord?
-    @State private var showChallenge = false
 
     var body: some View {
         ScrollView {
@@ -683,8 +711,7 @@ private struct NativeMatchesScreen: View {
                     }
                 } else {
                     WeeklyCalendar(sport: app.activeSport)
-                    CalendarLegend(sport: app.activeSport)
-                    MPPrimaryButton(title: "Add a Challenge", icon: "plus") { showChallenge = true }
+                    CalendarLegend()
                 }
                 Color.clear.frame(height: 150)
             }
@@ -696,9 +723,6 @@ private struct NativeMatchesScreen: View {
                 openProfile()
             }
             .presentationDetents([.medium, .large])
-        }
-        .sheet(isPresented: $showChallenge) {
-            QuickChallengeSheet().presentationDetents([.large])
         }
     }
 }
@@ -718,7 +742,7 @@ private struct NativeCalendarScreen: View {
                 MPSegmented(options: ["Week", "Past matches"], selection: $segment)
                 if segment == "Week" {
                     WeeklyCalendar(sport: app.activeSport)
-                    CalendarLegend(sport: app.activeSport)
+                    CalendarLegend()
                     MPPrimaryButton(title: "Add to calendar", icon: "plus") { showFixture = true }
                     Text("You and your squad both add fixtures here. There are no challenges or score uploads in \(app.activeSport.title).")
                         .font(.system(size: 12)).foregroundStyle(MP.ink3).multilineTextAlignment(.center)
@@ -740,14 +764,15 @@ private struct MPSegmented: View {
         HStack(spacing: 3) {
             ForEach(options, id: \.self) { option in
                 Button(option) { selection = option }
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(selection == option ? MP.black : MP.ink3)
-                    .frame(maxWidth: .infinity).frame(height: 44)
-                    .background(selection == option ? MP.lime : .clear, in: RoundedRectangle(cornerRadius: 11))
-                    .shadow(color: selection == option ? MP.shadow : .clear, radius: 4, y: 1)
+                    .font(RallyType.action)
+                    .foregroundStyle(selection == option ? RallyPalette.cream : MP.ink3)
+                    .frame(maxWidth: .infinity).frame(height: 48)
+                    .background(selection == option ? MP.ink : .clear, in: Capsule())
+                    .buttonStyle(RallyPressStyle())
+                    .accessibilityAddTraits(selection == option ? .isSelected : [])
             }
         }
-        .padding(3).background(MP.surface3, in: RoundedRectangle(cornerRadius: 14))
+        .padding(4).background(MP.surface3, in: Capsule())
     }
 }
 
@@ -824,10 +849,13 @@ private struct WeeklyCalendar: View {
         GeometryReader { geo in
             let column = (geo.size.width - 38) / 7
             Text(title).font(.system(size: 9, weight: .bold)).lineLimit(2).minimumScaleFactor(0.72)
-                .foregroundStyle(tentative ? MP.accent(sport) : MP.black)
+                .foregroundStyle(MP.ink)
                 .padding(3).frame(width: column - 2, height: duration * 40, alignment: .topLeading)
-                .background(tentative ? MP.soft(sport) : MP.accent(sport), in: RoundedRectangle(cornerRadius: 5))
-                .overlay(RoundedRectangle(cornerRadius: 5).stroke(tentative ? MP.accent(sport) : .clear, style: StrokeStyle(lineWidth: 1.2, dash: tentative ? [4, 3] : [])))
+                .background(tentative ? RallyPalette.cream : RallyPalette.sun, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(tentative ? RallyPalette.ink : .clear, style: StrokeStyle(lineWidth: 1.3, dash: tentative ? [4, 3] : []))
+                }
                 .offset(x: 38 + CGFloat(day) * column + 1, y: CGFloat(start - 7) * 40)
         }
     }
@@ -843,18 +871,24 @@ private extension View {
 }
 
 private struct CalendarLegend: View {
-    @EnvironmentObject private var app: AppState
-    let sport: Sport
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            legend(MP.accent(sport), "\(sport.title), confirmed")
-            legend(MP.soft(sport), "Awaiting a reply", border: MP.accent(sport))
-            if let other = app.mySports.first(where: { $0 != sport }) { legend(MP.accent(other).opacity(0.3), other.title) }
+            legend(RallyPalette.sun, "Confirmed booking")
+            legend(RallyPalette.cream, "Awaiting reply", border: RallyPalette.ink, dashed: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    private func legend(_ color: Color, _ title: String, border: Color = .clear) -> some View {
-        HStack(spacing: 8) { RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 14, height: 14).overlay(RoundedRectangle(cornerRadius: 3).stroke(border)); Text(title).font(.system(size: 11)).foregroundStyle(MP.ink3) }
+    private func legend(_ color: Color, _ title: String, border: Color = .clear, dashed: Bool = false) -> some View {
+        HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(color)
+                .frame(width: 18, height: 18)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .stroke(border, style: StrokeStyle(lineWidth: 1.3, dash: dashed ? [4, 3] : []))
+                }
+            Text(title).font(RallyType.caption).foregroundStyle(MP.ink3)
+        }
     }
 }
 
@@ -887,7 +921,15 @@ private struct MPPrimaryButton: View {
     let icon: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Label(title, systemImage: icon).font(.system(size: 15, weight: .bold)).foregroundStyle(MP.black).frame(maxWidth: .infinity).frame(height: 52).background(MP.orange, in: RoundedRectangle(cornerRadius: 18)) }
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(RallyType.action)
+                .foregroundStyle(MP.ink)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(MP.orange, in: Capsule())
+        }
+        .buttonStyle(RallyPressStyle())
     }
 }
 
@@ -951,9 +993,13 @@ private struct NativeChatsScreen: View {
                 MPSegmented(options: ["Chats", "Requests"], selection: $segment)
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(MP.ink4)
-                    TextField("Search by name or username", text: $search).font(.system(size: 14))
+                    TextField("Search by name or username", text: $search)
+                        .font(RallyType.body())
+                        .foregroundStyle(MP.ink)
                 }
-                .padding(.horizontal, 14).frame(height: 46).background(MP.surface2, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
+                .padding(.horizontal, 18)
+                .frame(height: 52)
+                .background(MP.surface2, in: Capsule())
 
                 ForEach(conversations.filter { conversation in
                     guard !search.isEmpty, let player = app.player(conversation.partnerId) else { return search.isEmpty }
@@ -982,9 +1028,20 @@ private struct NativeChatsScreen: View {
             .padding(.horizontal, 20)
         }
         .sheet(item: $selectedProfile) { ProfileDetailView(player: $0).presentationDetents([.large]) }
-        .sheet(isPresented: $showGroupComposer) { GroupChatComposer().presentationDetents([.medium, .large]) }
+        .sheet(isPresented: $showGroupComposer) {
+            GroupChatComposer()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+        }
         .fullScreenCover(item: $selectedConversation) { conversation in
             NativeChatScreen(conversation: conversation)
+        }
+        .onAppear {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-demo-group-chat") {
+                showGroupComposer = true
+            }
+#endif
         }
     }
 
