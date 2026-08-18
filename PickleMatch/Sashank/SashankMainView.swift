@@ -1073,7 +1073,7 @@ private struct NativeMapScreen: View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea(edges: .bottom)
 
-            VStack(spacing: 8) {
+            ZStack(alignment: .topLeading) {
                 HStack(spacing: 6) {
                     filterButton(.audience, text: audience, icon: "person.2", width: 106)
                     filterButton(.gender, text: gender?.rawValue ?? "Gender", icon: "person", width: 88)
@@ -1091,9 +1091,12 @@ private struct NativeMapScreen: View {
 
                 if let activeFilter {
                     filterPanel(activeFilter)
+                        .offset(x: filterPanelX(activeFilter), y: 52)
+                        .zIndex(3)
                         .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(.horizontal, 10)
             .padding(.top, 76)
             .animation(.spring(response: 0.34, dampingFraction: 0.82), value: activeFilter)
@@ -1120,6 +1123,14 @@ private struct NativeMapScreen: View {
         }
         .sheet(item: $selected) { player in
             ProfileDetailView(player: player).presentationDetents([.medium, .large])
+        }
+        .onAppear {
+#if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-demo-map-audience-filter") { activeFilter = .audience }
+            if arguments.contains("-demo-map-gender-filter") { activeFilter = .gender }
+            if arguments.contains("-demo-map-rating-filter") { activeFilter = .rating }
+#endif
         }
     }
 
@@ -1169,23 +1180,31 @@ private struct NativeMapScreen: View {
                     activeFilter = nil
                 } label: {
                     HStack {
-                        Text(option).font(RallyType.action)
+                        Text(option).font(.system(size: 11.5, weight: .semibold))
                         Spacer()
-                        if selected { Circle().fill(MP.orange).frame(width: 12, height: 12) }
+                        if selected { Circle().fill(MP.orange).frame(width: 10, height: 10) }
                     }
                     .foregroundStyle(selected ? MP.background : MP.ink)
-                    .padding(.horizontal, 18)
-                    .frame(height: 50)
+                    .padding(.horizontal, 12)
+                    .frame(height: 38)
                     .background(selected ? MP.ink : .clear, in: Capsule())
                 }
                 .buttonStyle(RallyPressStyle())
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(8)
-        .frame(width: 238)
-        .background(MP.background, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+        .padding(5)
+        .frame(width: 146)
+        .background(MP.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .rallyLifted(0.7)
+    }
+
+    private func filterPanelX(_ panel: NativeMapFilterPanel) -> CGFloat {
+        switch panel {
+        case .audience: 0
+        case .gender: 112
+        case .rating: 206
+        }
     }
 
     private func selectedOption(_ panel: NativeMapFilterPanel) -> String {
@@ -1845,6 +1864,7 @@ struct NativeChatScreen: View {
     let conversation: Conversation
     @State private var draft = ""
     @State private var showChallenge = false
+    @State private var showActions = false
 
     private var player: Player? { app.player(conversation.partnerId) }
     private var currentConversation: Conversation {
@@ -1898,30 +1918,59 @@ struct NativeChatScreen: View {
             }
             .background(MP.background)
 
-            HStack(spacing: 9) {
-                if app.activeSport.category == .individual {
-                    Button { showChallenge = true } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                if showActions {
+                    VStack(spacing: 2) {
+                        attachmentAction("Photos & videos", icon: "photo.on.rectangle") {
+                            app.send(.image, to: conversation.partnerId); showActions = false
+                        }
+                        attachmentAction("Camera", icon: "camera") {
+                            app.send(.image, to: conversation.partnerId); showActions = false
+                        }
+                        attachmentAction("Share location", icon: "location") {
+                            app.send(.location("Shared location · Austin, TX"), to: conversation.partnerId); showActions = false
+                        }
+                        if app.activeSport.category == .individual {
+                            attachmentAction("Send a challenge", icon: "flag.checkered") {
+                                showActions = false; showChallenge = true
+                            }
+                        }
+                    }
+                    .padding(8)
+                    .frame(width: 232)
+                    .background(MP.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.line, lineWidth: 1.5))
+                    .shadow(color: MP.shadow, radius: 18, y: 8)
+                    .transition(.scale(scale: 0.92, anchor: .bottomLeading).combined(with: .opacity))
+                }
+
+                HStack(spacing: 9) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) { showActions.toggle() }
+                    } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 18, weight: .bold))
                             .foregroundStyle(MP.ink)
+                            .rotationEffect(.degrees(showActions ? 45 : 0))
                             .frame(width: 50, height: 50)
                             .overlay(Circle().stroke(MP.ink.opacity(0.32), lineWidth: 1.5))
                     }
                     .buttonStyle(RallyPressStyle())
-                    .accessibilityLabel("Create a challenge")
+                    .accessibilityLabel(showActions ? "Close attachment options" : "Open attachment options")
+
+                    TextField("Write a message", text: $draft)
+                        .font(RallyType.body())
+                        .padding(.horizontal, 18)
+                        .frame(height: 50)
+                        .background(MP.surface2, in: Capsule())
+                    Button {
+                        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !text.isEmpty else { return }
+                        app.send(.text(text), to: conversation.partnerId)
+                        draft = ""
+                    } label: { Image(systemName: "arrow.up").foregroundStyle(MP.background).frame(width: 50, height: 50).background(MP.ink, in: Circle()) }
+                        .buttonStyle(RallyPressStyle())
                 }
-                TextField("Write a message", text: $draft)
-                    .font(RallyType.body())
-                    .padding(.horizontal, 18)
-                    .frame(height: 50)
-                    .background(MP.surface2, in: Capsule())
-                Button {
-                    let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !text.isEmpty else { return }
-                    app.send(.text(text), to: conversation.partnerId)
-                    draft = ""
-                } label: { Image(systemName: "arrow.up").foregroundStyle(MP.background).frame(width: 50, height: 50).background(MP.ink, in: Circle()) }
-                    .buttonStyle(RallyPressStyle())
             }
             .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(MP.background)
         }
@@ -1934,6 +1983,9 @@ struct NativeChatScreen: View {
 #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-demo-challenge") {
                 showChallenge = true
+            }
+            if ProcessInfo.processInfo.arguments.contains("-demo-chat-actions") {
+                showActions = true
             }
 #endif
         }
@@ -1948,6 +2000,22 @@ struct NativeChatScreen: View {
         case .location(let value): value
         case .system(let value): value
         }
+    }
+
+    private func attachmentAction(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(MP.ink)
+                    .frame(width: 32, height: 32)
+                    .background(MP.orange, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(MP.ink)
+                Spacer()
+            }
+            .padding(.horizontal, 10).frame(height: 48)
+        }
+        .buttonStyle(RallyPressStyle())
     }
 }
 

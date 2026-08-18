@@ -8,13 +8,8 @@ struct ChallengeComposerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var note = ""
-    @State private var proposedDates = [
-        Date().addingTimeInterval(86_400),
-        Date().addingTimeInterval(2 * 86_400),
-        Date().addingTimeInterval(3 * 86_400)
-    ]
+    @State private var proposedDates = [Date().addingTimeInterval(86_400)]
     @State private var venue = ""
-    @State private var sport: Sport?
     @State private var showUnratedWarning = false
     @State private var matchMode: MatchMode = .casual
 
@@ -42,8 +37,8 @@ struct ChallengeComposerView: View {
                         }
                         Spacer()
                         RallyRatingPlate(
-                            sport: sport ?? app.activeSport,
-                            profile: player.profile(sport ?? app.activeSport),
+                            sport: app.activeSport,
+                            profile: player.profile(app.activeSport),
                             diameter: 64
                         )
                     }
@@ -63,22 +58,45 @@ struct ChallengeComposerView: View {
 
                     challengeField(title: "Match details") {
                         VStack(alignment: .leading, spacing: 16) {
-                            RallySportSelector(
-                                sports: app.mySports,
-                                selection: sport ?? app.activeSport,
-                                select: { sport = $0 }
-                            )
-                            .padding(.horizontal, -RallyLayout.gutter)
-
-                            Text("Offer three times so \(player.firstName) can choose what works.")
+                            Text("Choose one time. Add more options if you want to give \(player.firstName) flexibility.")
                                 .font(RallyType.caption)
                                 .foregroundStyle(Theme.muted)
 
                             ForEach(proposedDates.indices, id: \.self) { index in
-                                RallyDateTimeSelector(
-                                    label: "Option \(index + 1)",
-                                    selection: $proposedDates[index]
-                                )
+                                HStack(spacing: 8) {
+                                    RallyDateTimeSelector(
+                                        label: proposedDates.count == 1 ? "When" : "Option \(index + 1)",
+                                        selection: $proposedDates[index]
+                                    )
+                                    if proposedDates.count > 1 {
+                                        Button {
+                                            proposedDates.remove(at: index)
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundStyle(Theme.ink)
+                                                .frame(width: 44, height: 44)
+                                                .background(Theme.surface2, in: Circle())
+                                        }
+                                        .buttonStyle(RallyPressStyle())
+                                        .accessibilityLabel("Remove time option \(index + 1)")
+                                    }
+                                }
+                            }
+
+                            if proposedDates.count < 3 {
+                                Button {
+                                    let next = (proposedDates.last ?? .now).addingTimeInterval(86_400)
+                                    withAnimation(.easeInOut(duration: 0.18)) { proposedDates.append(next) }
+                                } label: {
+                                    Label("Add another time", systemImage: "plus")
+                                        .font(RallyType.action)
+                                        .foregroundStyle(Theme.ink)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 50)
+                                        .overlay(Capsule().stroke(Theme.ink.opacity(0.3), lineWidth: 1.5))
+                                }
+                                .buttonStyle(RallyPressStyle())
                             }
 
                             TextField("Venue or court", text: $venue)
@@ -87,7 +105,7 @@ struct ChallengeComposerView: View {
                                 .frame(height: 54)
                                 .background(Theme.surface2, in: Capsule())
 
-                            if (sport ?? app.activeSport).category == .individual {
+                            if app.activeSport.category == .individual {
                                 MinimalChoiceBar(
                                     options: MatchMode.allCases.map(\.rawValue),
                                     selection: Binding(
@@ -134,9 +152,8 @@ struct ChallengeComposerView: View {
                 .padding(.trailing, RallyLayout.gutter)
         }
         .preferredColorScheme(.light)
-        .onAppear { sport = app.activeSport }
         .sheet(isPresented: $showUnratedWarning) {
-            UnratedInviteConfirmationSheet(name: player.name, sport: sport ?? app.activeSport) {
+            UnratedInviteConfirmationSheet(name: player.name, sport: app.activeSport) {
                 sendChallenge(isRatingExempt: true)
             }
             .presentationDetents([.medium])
@@ -159,7 +176,7 @@ struct ChallengeComposerView: View {
     }
 
     private var playerStatus: String {
-        let chosen = sport ?? app.activeSport
+        let chosen = app.activeSport
         guard let profile = player.profile(chosen) else { return chosen.title }
         if profile.usesElo { return "Elo \(profile.rating) · \(EloRating.tier(for: profile.rating))" }
         if chosen.category == .group { return "Peer-rated \(chosen.title) profile" }
@@ -167,13 +184,13 @@ struct ChallengeComposerView: View {
     }
 
     private var isRatingMismatch: Bool {
-        app.isRatingExempt(opponentIds: [player.id], sport: sport ?? app.activeSport)
+        app.isRatingExempt(opponentIds: [player.id], sport: app.activeSport)
     }
 
     private func sendChallenge(isRatingExempt: Bool = false) {
         app.createChallenge(
             with: player,
-            sport: sport ?? app.activeSport,
+            sport: app.activeSport,
             date: proposedDates[0],
             proposedDates: proposedDates,
             venue: venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Venue TBD" : venue,
