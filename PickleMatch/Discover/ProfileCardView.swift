@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Swipeable player sticker card using the shared Sorbet Pop visual language.
+/// Swipeable player card using the shared light editorial visual language.
 struct ProfileCardView: View {
     let player: Player
     let sport: Sport
@@ -9,10 +9,6 @@ struct ProfileCardView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
-                .fill(Theme.ink)
-                .offset(x: 7, y: 8)
-
             VStack(spacing: 0) {
                 header
                 details
@@ -21,13 +17,11 @@ struct ProfileCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
-                    .stroke(Theme.ink, lineWidth: 3.5)
+                    .stroke(Theme.hairline, lineWidth: 1)
             )
         }
         .frame(maxWidth: .infinity)
         .frame(height: 510)
-        .padding(.trailing, 7)
-        .padding(.bottom, 8)
         .accessibilityElement(children: .combine)
     }
 
@@ -48,7 +42,7 @@ struct ProfileCardView: View {
             VStack(spacing: 0) {
                 HStack {
                     Text(sport == .pickleball ? "DINK PARTNER" : "RALLY PARTNER")
-                        .font(.system(size: 10, weight: .black, design: .rounded))
+                        .font(Theme.ui(10, weight: .semibold))
                         .tracking(1.5)
                         .foregroundStyle(Theme.ink.opacity(0.68))
                         .padding(.horizontal, 10)
@@ -68,9 +62,9 @@ struct ProfileCardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(player.name)
-                            .font(.system(size: 30, weight: .black, design: .rounded))
+                            .font(Theme.heading(30))
                         Text("\(player.age)")
-                            .font(.system(size: 23, weight: .bold, design: .rounded))
+                            .font(Theme.ui(20, weight: .medium))
                         Spacer()
                     }
                     .foregroundStyle(Theme.ink)
@@ -79,7 +73,7 @@ struct ProfileCardView: View {
                         Label("\(player.distanceMiles, specifier: "%.1f") mi", systemImage: "location.fill")
                         Label(player.city, systemImage: "mappin.circle.fill")
                     }
-                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .font(Theme.ui(12, weight: .medium))
                     .foregroundStyle(Theme.ink.opacity(0.72))
                 }
             }
@@ -123,7 +117,7 @@ struct ProfileCardView: View {
             }
 
             Text(player.bio)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(Theme.ui(15))
                 .foregroundStyle(Theme.ink.opacity(0.72))
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
@@ -131,8 +125,8 @@ struct ProfileCardView: View {
             Spacer(minLength: 0)
 
             HStack {
-                Text("Tap for the full scoop")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
+                Text("View profile")
+                    .font(Theme.ui(12, weight: .semibold))
                     .foregroundStyle(Theme.grape)
                 Spacer()
                 Image(systemName: "arrow.up.right")

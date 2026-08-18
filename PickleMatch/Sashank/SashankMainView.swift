@@ -338,6 +338,13 @@ private struct NativeHomeScreen: View {
             .padding(.horizontal, 20)
         }
         .sheet(item: $selectedPlayer) { ProfileDetailView(player: $0) }
+        .onAppear {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-demo-player-sheet") {
+                selectedPlayer = players.first
+            }
+#endif
+        }
     }
 
     private var hero: some View {
