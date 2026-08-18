@@ -1,5 +1,7 @@
 # Match Point — Dual-State iOS Prototype
 
+For the complete behavior-preservation inventory used for redesign work, see [`SASHANK_FUNCTIONALITY_SPEC.md`](SASHANK_FUNCTIONALITY_SPEC.md).
+
 A production-grade SwiftUI prototype for sports matchmaking and social play. Choose the **New user** state to complete onboarding with an empty account, or the **Established player** state to explore a populated three-sport account with ratings, peer-reviewed cricket skills, friends, chats, challenges, matches, and statistics.
 
 Everything runs on in-memory mock data — no backend, no accounts, no network.

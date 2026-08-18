@@ -1,5 +1,7 @@
 # PickleMatch Product Specification and Business Foundation Report
 
+> **Historical product audit:** This report reflects the July 31, 2026 build and contains superseded details such as the earlier rating scale and navigation model. For current redesign behavior, use [`SASHANK_FUNCTIONALITY_SPEC.md`](SASHANK_FUNCTIONALITY_SPEC.md) as the source of truth.
+
 **Audit date:** July 31, 2026  
 **Product stage:** Buildable, high-fidelity iOS prototype; pre-production network marketplace  
 **Evidence reviewed:** all SwiftUI source, models, state logic, widget code, 19 exported workspace mockups, 12 production image assets, three referenced JSX prototypes, the linked editable Paper canvas, the README, project configuration, and a successful iOS Simulator build.
@@ -811,4 +813,3 @@ Even with 1,000 registered users, if weekly active rate is 25%, sport fit .6, ge
 PickleMatch has progressed beyond a superficial UI concept into a coherent, buildable product thesis with a distinctive end-to-end loop. The most investable insight is the persistent availability and commitment graph embedded in local player discovery—not the existence of ratings, maps, chat, or scoring individually. The current design work is unusually complete for a prototype and makes the transaction legible from onboarding through result celebration.
 
 The opportunity is credible but not yet defensible. Adjacent competitors already own major pieces of the stack and several increasingly claim all-in-one positioning. The venture case depends on proving three things quickly in one dense market: (1) availability-aware recommendations materially reduce time-to-match, (2) verified completed matches cause retention, and (3) the safety/trust system supports stranger coordination without unacceptable incident or moderation cost. If those are proven, the product can expand from a consumer coordination wedge into a local sports network, organizer platform, and venue demand marketplace. If they are not, additional features will not compensate for insufficient liquidity.
-
