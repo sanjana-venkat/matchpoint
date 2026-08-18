@@ -35,19 +35,13 @@ struct SashankMainView: View {
             MP.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                appBar
-                Group {
-                    switch tab {
-                    case .map: NativeMapScreen()
-                    case .matches:
-                        if app.activeSport.category == .group { NativeCalendarScreen() }
-                        else { NativeMatchesScreen(openProfile: { tab = .profile }) }
-                    case .home: NativeHomeScreen(openTab: { tab = $0 }, switchSport: requestSportChange)
-                    case .chats: NativeChatsScreen()
-                    case .profile: NativeProfileScreen()
-                    }
+                if tab == .map {
+                    tabContent
+                        .overlay(alignment: .top) { appBar }
+                } else {
+                    appBar
+                    tabContent
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             nativeNav
@@ -99,6 +93,21 @@ struct SashankMainView: View {
         }
     }
 
+    @ViewBuilder private var tabContent: some View {
+        Group {
+            switch tab {
+            case .map: NativeMapScreen()
+            case .matches:
+                if app.activeSport.category == .group { NativeCalendarScreen() }
+                else { NativeMatchesScreen(openProfile: { tab = .profile }) }
+            case .home: NativeHomeScreen(openTab: { tab = $0 }, switchSport: requestSportChange)
+            case .chats: NativeChatsScreen()
+            case .profile: NativeProfileScreen()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private var appBar: some View {
         HStack(spacing: 10) {
             if tab == .home {
@@ -107,7 +116,7 @@ struct SashankMainView: View {
                     Text(app.me.city.isEmpty ? "Austin" : app.me.city).font(RallyType.caption)
                 }
                 .padding(.horizontal, 13)
-                .frame(minHeight: 44)
+                .frame(minHeight: 48)
                 .overlay(Capsule().stroke(MP.line, lineWidth: 1.5))
             } else {
                 Button { withAnimation(.easeOut(duration: 0.16)) { showSports.toggle() } } label: {
@@ -120,7 +129,8 @@ struct SashankMainView: View {
                             .foregroundStyle(MP.ink3)
                     }
                     .padding(.horizontal, 13)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: 48)
+                    .background(RallyPalette.cream.opacity(0.96), in: Capsule())
                     .overlay(Capsule().stroke(MP.line, lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
@@ -131,21 +141,37 @@ struct SashankMainView: View {
             Spacer()
 
             Button { showNotifications = true } label: {
-                HStack(spacing: 6) {
+                if tab == .map {
                     Image(systemName: "bell")
                         .font(.system(size: 19, weight: .semibold))
-                    Text("4")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(MP.black)
-                        .frame(width: 21, height: 21)
-                        .background(MP.accent(app.activeSport), in: Circle())
+                        .foregroundStyle(MP.ink)
+                        .frame(width: 48, height: 48)
+                        .background(RallyPalette.cream, in: Circle())
+                        .overlay(Circle().stroke(MP.line, lineWidth: 1.5))
+                        .overlay(alignment: .topTrailing) {
+                            Text("4")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(MP.ink)
+                                .frame(width: 22, height: 22)
+                                .background(MP.orange, in: Circle())
+                                .offset(x: 4, y: -4)
+                        }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 19, weight: .semibold))
+                        Text("4")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(MP.black)
+                            .frame(width: 21, height: 21)
+                            .background(MP.accent(app.activeSport), in: Circle())
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 48)
+                    .overlay(Capsule().stroke(MP.line, lineWidth: 1.5))
                 }
-                .frame(minWidth: 64, minHeight: 44)
-                .background(MP.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 15).stroke(MP.line, lineWidth: 1))
-                .shadow(color: MP.shadow, radius: 8, y: 2)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(RallyPressStyle())
             .accessibilityLabel("Notifications, 4 unread")
         }
         .padding(.horizontal, 20)
@@ -229,9 +255,11 @@ struct SashankMainView: View {
                 }
             }
             Button { withAnimation(.spring(response: 0.25)) { fabOpen.toggle() } } label: {
-                Image(systemName: fabOpen ? "xmark" : "plus")
+                Image(systemName: "plus")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(MP.background)
+                    .rotationEffect(.degrees(fabOpen ? 45 : 0))
+                    .animation(.spring(response: 0.34, dampingFraction: 0.78), value: fabOpen)
                     .frame(width: 54, height: 54)
                     .background(MP.black, in: Circle())
                     .shadow(color: Color.black.opacity(0.22), radius: 14, y: 7)
@@ -601,11 +629,13 @@ private struct NativeMapScreen: View {
     @State private var camera: MapCameraPosition = .region(.init(center: .init(latitude: 30.2672, longitude: -97.7431), span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
     @State private var gender: Gender?
     @State private var rating = "Any rating"
+    @State private var audience = "Everyone"
     @State private var selected: Player?
 
     private var players: [Player] {
         app.players.filter { player in
             guard player.profile(app.activeSport) != nil else { return false }
+            guard audience != "Friends" || app.friendIds.contains(player.id) else { return false }
             guard gender == nil || player.gender == gender else { return false }
             switch rating {
             case "Under 80": return player.rating(app.activeSport) < 80
@@ -618,7 +648,7 @@ private struct NativeMapScreen: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Map(position: $camera) {
+            Map(position: $camera, interactionModes: [.pan, .zoom]) {
                 Annotation("You", coordinate: .init(latitude: 30.2672, longitude: -97.7431)) {
                     Circle().fill(MP.accent(app.activeSport)).frame(width: 16, height: 16)
                         .overlay(Circle().stroke(.white, lineWidth: 3))
@@ -628,11 +658,16 @@ private struct NativeMapScreen: View {
                     Annotation(player.name, coordinate: coordinate(index)) {
                         Button { selected = player } label: {
                             ZStack(alignment: .bottom) {
-                                RallyPlayerAvatar(player: player, size: 48, ring: RallyPalette.cream)
+                                RallyPlayerAvatar(
+                                    player: player,
+                                    size: 48,
+                                    ring: app.friendIds.contains(player.id) ? RallyPalette.sun : RallyPalette.cream,
+                                    ringWidth: app.friendIds.contains(player.id) ? 4 : 2.5
+                                )
                                     .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
                                 Text("\(player.rating(app.activeSport))")
                                     .font(.system(size: 9, weight: .bold)).foregroundStyle(MP.accentText(app.activeSport))
-                                    .padding(.horizontal, 5).frame(height: 15).background(.white, in: Capsule()).offset(y: 5)
+                                    .padding(.horizontal, 5).frame(height: 15).background(RallyPalette.cream, in: Capsule()).offset(y: 5)
                             }
                         }
                     }
@@ -646,24 +681,28 @@ private struct NativeMapScreen: View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea(edges: .bottom)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Menu {
+                    Button("Everyone") { audience = "Everyone" }
+                    Button("Friends") { audience = "Friends" }
+                } label: { filterChip(audience, icon: "person.2", width: 106) }
                 Menu {
                     Button("Any gender") { gender = nil }
                     ForEach(Gender.allCases) { value in Button(value.rawValue) { gender = value } }
-                } label: { filterChip(gender?.rawValue ?? "Gender", icon: "person.2") }
+                } label: { filterChip(gender?.rawValue ?? "Gender", icon: "person", width: 88) }
                 Menu {
                     ForEach(["Any rating", "Under 80", "80 to 110", "Above 110"], id: \.self) { value in Button(value) { rating = value } }
-                } label: { filterChip(rating == "Any rating" ? "Rating" : rating, icon: "bolt") }
-                Button("Clear filters") { gender = nil; rating = "Any rating" }
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(gender == nil && rating == "Any rating" ? MP.ink3 : MP.ink)
+                } label: { filterChip(rating == "Any rating" ? "Rating" : rating, icon: "bolt", width: 88) }
+                Button("Clear") { audience = "Everyone"; gender = nil; rating = "Any rating" }
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(audience == "Everyone" && gender == nil && rating == "Any rating" ? MP.ink3 : MP.ink)
                     .lineLimit(1)
-                    .frame(width: 92, height: 44).background(MP.background, in: Capsule())
+                    .frame(width: 56, height: 44).background(MP.background, in: Capsule())
                     .overlay(Capsule().stroke(MP.line, lineWidth: 1))
-                    .disabled(gender == nil && rating == "Any rating")
+                    .disabled(audience == "Everyone" && gender == nil && rating == "Any rating")
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 10)
+            .padding(.horizontal, 10)
+            .padding(.top, 76)
         }
         .sheet(item: $selected) { player in
             ProfileDetailView(player: player).presentationDetents([.medium, .large])
@@ -676,15 +715,16 @@ private struct NativeMapScreen: View {
         return .init(latitude: 30.2672 + pair.0, longitude: -97.7431 + pair.1)
     }
 
-    private func filterChip(_ text: String, icon: String) -> some View {
+    private func filterChip(_ text: String, icon: String, width: CGFloat) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
             Text(text)
             Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(MP.ink3)
         }
-        .font(.system(size: 12, weight: .semibold)).foregroundStyle(MP.ink)
+        .font(.system(size: 11.5, weight: .semibold)).foregroundStyle(MP.ink)
         .lineLimit(1)
-        .padding(.horizontal, 11).frame(maxWidth: 112).frame(height: 44).background(MP.background, in: Capsule())
+        .minimumScaleFactor(0.78)
+        .padding(.horizontal, 8).frame(width: width).frame(height: 44).background(MP.background, in: Capsule())
         .overlay(Capsule().stroke(MP.line, lineWidth: 1)).shadow(color: MP.shadow, radius: 4, y: 1)
     }
 }
@@ -1038,8 +1078,12 @@ private struct NativeChatsScreen: View {
         }
         .onAppear {
 #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-demo-group-chat") {
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-demo-group-chat") {
                 showGroupComposer = true
+            }
+            if arguments.contains("-demo-thread") {
+                selectedConversation = conversations.first
             }
 #endif
         }
@@ -1058,7 +1102,7 @@ private struct NativeChatsScreen: View {
     }
 }
 
-private struct NativeChatScreen: View {
+struct NativeChatScreen: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     let conversation: Conversation
@@ -1073,18 +1117,23 @@ private struct NativeChatScreen: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Button { dismiss() } label: { Image(systemName: "chevron.left").font(.system(size: 18, weight: .bold)).frame(width: 36, height: 36).background(MP.surface2, in: Circle()).overlay(Circle().stroke(MP.line)) }
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .bold))
+                        .frame(width: 44, height: 44)
+                        .overlay(Circle().stroke(MP.ink.opacity(0.22), lineWidth: 1.5))
+                }
+                .buttonStyle(RallyPressStyle())
                 if let player { RallyPlayerAvatar(player: player, size: 40, ring: MP.background) }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(player?.name ?? "Conversation").font(.system(size: 15.5, weight: .bold))
                     Text(player?.username ?? "").font(.system(size: 11)).foregroundStyle(MP.ink3)
                 }
                 Spacer()
-                if app.activeSport.category == .individual {
-                    Button { showChallenge = true } label: { Image(systemName: "trophy").frame(width: 36, height: 36).background(MP.surface2, in: Circle()).overlay(Circle().stroke(MP.line)) }
-                }
             }
             .padding(.horizontal, 20).padding(.vertical, 10)
+            .background(MP.background)
+            .overlay(alignment: .bottom) { Rectangle().fill(MP.line).frame(height: 1) }
 
             ScrollView {
                 LazyVStack(spacing: 8) {
@@ -1113,20 +1162,43 @@ private struct NativeChatScreen: View {
             .background(MP.background)
 
             HStack(spacing: 9) {
+                if app.activeSport.category == .individual {
+                    Button { showChallenge = true } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(MP.ink)
+                            .frame(width: 50, height: 50)
+                            .overlay(Circle().stroke(MP.ink.opacity(0.32), lineWidth: 1.5))
+                    }
+                    .buttonStyle(RallyPressStyle())
+                    .accessibilityLabel("Create a challenge")
+                }
                 TextField("Write a message", text: $draft)
-                    .padding(.horizontal, 14).frame(height: 44).background(MP.surface2, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(MP.line))
+                    .font(RallyType.body())
+                    .padding(.horizontal, 18)
+                    .frame(height: 50)
+                    .background(MP.surface2, in: Capsule())
                 Button {
                     let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { return }
                     app.send(.text(text), to: conversation.partnerId)
                     draft = ""
                 } label: { Image(systemName: "arrow.up").foregroundStyle(MP.background).frame(width: 50, height: 50).background(MP.ink, in: Circle()) }
+                    .buttonStyle(RallyPressStyle())
             }
-            .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(MP.surface)
+            .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 26).background(MP.background)
         }
+        .background(MP.background.ignoresSafeArea())
         .foregroundStyle(MP.ink).preferredColorScheme(.light)
         .sheet(isPresented: $showChallenge) {
             if let player { ChallengeComposerView(player: player) }
+        }
+        .onAppear {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-demo-challenge") {
+                showChallenge = true
+            }
+#endif
         }
     }
 
@@ -1146,6 +1218,7 @@ private struct NativeProfileScreen: View {
     @EnvironmentObject private var app: AppState
 
     private var profile: SportProfile? { app.me.profile(app.activeSport) }
+    private var profileHeroImage: String { "Rally-player-maya" }
 
     var body: some View {
         ScrollView {
@@ -1155,12 +1228,12 @@ private struct NativeProfileScreen: View {
                         .fill(MP.orange)
                         .frame(height: 330)
 
-                    RallyPhoto(name: "Rally-hero-serve")
-                        .frame(width: 186, height: 340)
+                    RallyPhoto(name: profileHeroImage)
+                        .frame(width: 176, height: 326)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                         .rallyLifted(0.6)
-                        .offset(x: 145, y: -54)
+                        .offset(x: 160, y: -48)
 
                     VStack(alignment: .leading, spacing: 7) {
                         Text(app.me.city).rallyEyebrow(MP.ink.opacity(0.56))
@@ -1171,7 +1244,7 @@ private struct NativeProfileScreen: View {
                         Text("\(app.displayedFriendCount) friends")
                             .font(RallyType.caption).foregroundStyle(MP.ink.opacity(0.62))
                     }
-                    .frame(width: 172, alignment: .leading)
+                    .frame(width: 154, alignment: .leading)
                     .padding(24)
                 }
                 .frame(height: 330)
@@ -1182,11 +1255,7 @@ private struct NativeProfileScreen: View {
 
                 ratingCard
                 MPSectionHeader(title: "\(app.activeSport.title) statistics")
-                HStack(spacing: 10) {
-                    statistic("\(app.myMatches.count)", app.activeSport.category == .group ? "Fixtures" : "Matches")
-                    statistic("\(app.wins)", "Wins", color: MP.accentText(app.activeSport))
-                    statistic("\(Int(app.winPct))%", "Win rate")
-                }
+                statisticsBlock
                 if profile?.usesElo == true { ratingTrend }
                 if app.activeSport.category == .group { testimonials }
                 settings
@@ -1198,50 +1267,87 @@ private struct NativeProfileScreen: View {
 
     @ViewBuilder private var ratingCard: some View {
         if app.activeSport.category == .group {
-            MPCard {
-                VStack(alignment: .leading, spacing: 11) {
-                    Text("PEER SKILL EVALUATION").font(.system(size: 10.5, weight: .heavy)).tracking(1).foregroundStyle(MP.ink3)
-                    ForEach(profile?.peerSkillRatings ?? []) { skill in
-                        VStack(spacing: 5) {
-                            HStack { Text(skill.category).font(.system(size: 14, weight: .semibold)); Spacer(); stars(skill.average); Text(String(format: "%.1f", skill.average)).font(.system(size: 13, weight: .bold)) }
-                            GeometryReader { geo in Capsule().fill(MP.surface3).overlay(alignment: .leading) { Capsule().fill(MP.accent(app.activeSport)).frame(width: geo.size.width * skill.average / 5) } }.frame(height: 5)
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Peer skill evaluation").rallyEyebrow()
+                ForEach(profile?.peerSkillRatings ?? []) { skill in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(skill.category).font(RallyType.meta)
+                        Spacer()
+                        Text(String(format: "%.1f", skill.average))
+                            .font(RallyType.numeral(28))
+                        Text("of 5").font(RallyType.caption).foregroundStyle(MP.ink3)
                     }
                 }
             }
+            .padding(22)
+            .background(MP.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
         } else {
-            MPCard {
-                VStack(alignment: .leading, spacing: 9) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("MP RATING").font(.system(size: 10.5, weight: .heavy)).tracking(1).foregroundStyle(MP.ink3)
-                            Text(profile?.usesElo == true ? "\(profile?.rating ?? 80)" : "Unrated").font(.system(size: 40, weight: .heavy)).foregroundStyle(MP.accentText(app.activeSport))
-                            Text("Everyone starts at 80 and moves in small steps.").font(.system(size: 12)).foregroundStyle(MP.ink3)
-                        }
-                        Spacer(); MPAssetSportIcon(sport: app.activeSport, size: 50).opacity(0.6)
-                    }
-                    Divider().overlay(MP.line)
-                    Text("How the MP Rating works").font(.system(size: 13, weight: .bold)).foregroundStyle(MP.accentText(app.activeSport))
+            VStack(alignment: .leading, spacing: 10) {
+                Text(app.activeSport.title).rallyEyebrow(MP.orange)
+                Text(profile?.usesElo == true ? "\(profile?.rating ?? 80)" : "Unrated")
+                    .font(RallyType.numeral(profile?.usesElo == true ? 72 : 42))
+                    .foregroundStyle(MP.background)
+                Text(profile?.usesElo == true ? "Your current MP rating" : "This sport does not affect your rating")
+                    .font(RallyType.caption)
+                    .foregroundStyle(RallyPalette.creamMuted)
+                Rectangle().fill(MP.background.opacity(0.16)).frame(height: 1).padding(.vertical, 5)
+                HStack {
+                    Text("How the MP rating works").font(RallyType.action)
+                    Spacer()
+                    Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .bold))
                 }
+                .foregroundStyle(MP.background)
             }
+            .padding(22)
+            .background(MP.ink, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
         }
     }
 
-    private func statistic(_ value: String, _ label: String, color: Color = MP.ink) -> some View {
-        VStack(spacing: 4) { Text(value).font(.system(size: 25, weight: .heavy)).foregroundStyle(color); Text(label).font(.system(size: 11)).foregroundStyle(MP.ink3) }
-            .frame(maxWidth: .infinity).padding(.vertical, 14).background(MP.surface, in: RoundedRectangle(cornerRadius: 18)).overlay(RoundedRectangle(cornerRadius: 18).stroke(MP.strongLine))
+    private var statisticsBlock: some View {
+        HStack(spacing: 0) {
+            statistic("\(app.myMatches.count)", app.activeSport.category == .group ? "Fixtures" : "Matches")
+            Rectangle().fill(MP.line).frame(width: 1, height: 54)
+            statistic("\(app.wins)", "Wins")
+            Rectangle().fill(MP.line).frame(width: 1, height: 54)
+            statistic("\(Int(app.winPct))%", "Win rate")
+        }
+        .padding(.vertical, 16)
+        .background(MP.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+    }
+
+    private func statistic(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 5) {
+            Text(value).font(RallyType.numeral(28)).foregroundStyle(MP.ink)
+            Text(label).font(RallyType.caption).foregroundStyle(MP.ink3)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var ratingTrend: some View {
         VStack(alignment: .leading, spacing: 12) {
             MPSectionHeader(title: "Rating trend")
-            MPCard {
-                Chart(app.ratingHistory) { point in
-                    AreaMark(x: .value("Date", point.date), y: .value("Rating", point.rating)).foregroundStyle(MP.soft(app.activeSport))
-                    LineMark(x: .value("Date", point.date), y: .value("Rating", point.rating)).foregroundStyle(MP.accent(app.activeSport)).lineStyle(.init(lineWidth: 2.4, lineCap: .round))
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Last 30 days").font(RallyType.caption).foregroundStyle(MP.ink3)
+                    Spacer()
+                    Text("+\((app.ratingHistory.last?.rating ?? 0) - (app.ratingHistory.first?.rating ?? 0))")
+                        .font(RallyType.numeral(24))
+                        .foregroundStyle(MP.ink)
                 }
-                .chartXAxis(.hidden).frame(height: 90)
+                Chart(app.ratingHistory) { point in
+                    LineMark(x: .value("Date", point.date), y: .value("Rating", point.rating))
+                        .foregroundStyle(MP.ink)
+                        .lineStyle(.init(lineWidth: 2.4, lineCap: .round))
+                    PointMark(x: .value("Date", point.date), y: .value("Rating", point.rating))
+                        .foregroundStyle(MP.orange)
+                        .symbolSize(18)
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 104)
             }
+            .padding(20)
+            .background(MP.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
         }
     }
 
@@ -1262,15 +1368,25 @@ private struct NativeProfileScreen: View {
     private var settings: some View {
         VStack(alignment: .leading, spacing: 12) {
             MPSectionHeader(title: "Account configuration")
-            MPCard {
-                VStack(spacing: 0) {
-                    ForEach(["Edit profile details", "Manage your sports", "Privacy and visibility", "Notification preferences"], id: \.self) { title in
-                        HStack { Image(systemName: "gearshape").foregroundStyle(MP.ink4); Text(title).font(.system(size: 14, weight: .semibold)); Spacer(); Image(systemName: "chevron.right").foregroundStyle(MP.ink4) }
-                            .frame(height: 50)
-                        Divider().overlay(MP.line)
+            VStack(spacing: 0) {
+                ForEach(["Edit profile details", "Manage your sports", "Privacy and visibility", "Notification preferences"], id: \.self) { title in
+                    HStack {
+                        Text(title).font(RallyType.body(16, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(MP.ink3)
                     }
-                    HStack { Image(systemName: "nosign"); Text("Reset this account").font(.system(size: 14, weight: .semibold)); Spacer() }.foregroundStyle(MP.danger).frame(height: 50)
+                    .frame(minHeight: 58)
+                    Rectangle().fill(MP.line).frame(height: 1)
                 }
+                HStack {
+                    Text("Reset this account").font(RallyType.body(16, weight: .medium))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .frame(minHeight: 58)
             }
         }
     }

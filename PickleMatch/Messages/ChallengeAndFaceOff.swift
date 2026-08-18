@@ -8,74 +8,90 @@ struct ChallengeComposerView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var note = ""
-    @State private var date = Date().addingTimeInterval(86_400)
+    @State private var proposedDates = [
+        Date().addingTimeInterval(86_400),
+        Date().addingTimeInterval(2 * 86_400),
+        Date().addingTimeInterval(3 * 86_400)
+    ]
     @State private var venue = ""
     @State private var sport: Sport?
     @State private var showUnratedWarning = false
     @State private var matchMode: MatchMode = .casual
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack(spacing: 12) {
-                        AvatarView(avatar: player.avatar, size: 54)
+        ZStack(alignment: .topTrailing) {
+            RallyPalette.cream.ignoresSafeArea()
+
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: RallyLayout.section) {
+                    Text("Send a challenge")
+                        .font(RallyType.hero)
+                        .rallyDisplayLeading()
+                        .padding(.trailing, 52)
+
+                    HStack(spacing: 16) {
+                        RallyPlayerAvatar(player: player, size: 72)
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Challenging \(player.name)")
-                                .font(Theme.heading(18))
+                            Text(player.name)
+                                .font(RallyType.cardTitle)
                                 .foregroundStyle(Theme.ink)
                             Text(playerStatus)
-                                .font(Theme.ui(11, weight: .bold))
+                                .font(RallyType.caption)
                                 .foregroundStyle(Theme.muted)
                         }
                         Spacer()
-                        Image(systemName: "flag.checkered")
-                            .foregroundStyle(Theme.bg)
-                            .frame(width: 38, height: 38)
-                            .background(app.themeColor, in: RoundedRectangle(cornerRadius: 12))
+                        RallyRatingPlate(
+                            sport: sport ?? app.activeSport,
+                            profile: player.profile(sport ?? app.activeSport),
+                            diameter: 64
+                        )
                     }
-                    .padding(15)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.hairline, lineWidth: 1))
+                    .padding(18)
+                    .background(Theme.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
 
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "person.2.badge.gearshape")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Theme.blue)
-                            .frame(width: 42, height: 42)
-                            .background(Theme.blue.opacity(0.18), in: RoundedRectangle(cornerRadius: 13))
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Decide the wager together")
-                                .font(Theme.heading(15))
-                                .foregroundStyle(Theme.ink)
-                            Text("After the challenge is accepted, either of you can propose, accept, or skip a wager in chat.")
-                                .font(Theme.ui(12))
-                                .foregroundStyle(Theme.ink.opacity(0.76))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Decide the wager together")
+                            .font(RallyType.action)
+                        Text("After the challenge is accepted, either of you can propose, accept, or skip a wager in chat.")
+                            .font(RallyType.caption)
+                            .foregroundStyle(Theme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(15)
-                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.blue.opacity(0.55), lineWidth: 1))
+                    .padding(18)
+                    .background(Theme.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous))
 
                     challengeField(title: "Match details") {
-                        VStack(spacing: 12) {
-                            MinimalChoiceBar(
-                                options: app.mySports.map(\.title),
-                                selection: Binding(
-                                    get: { (sport ?? app.activeSport).title },
-                                    set: { title in sport = app.mySports.first { $0.title == title } }
-                                )
+                        VStack(alignment: .leading, spacing: 16) {
+                            RallySportSelector(
+                                sports: app.mySports,
+                                selection: sport ?? app.activeSport,
+                                select: { sport = $0 }
                             )
+                            .padding(.horizontal, -RallyLayout.gutter)
 
-                            DatePicker("Date and time", selection: $date, in: Date()...)
-                                .tint(app.themeColor)
+                            Text("Offer three times so \(player.firstName) can choose what works.")
+                                .font(RallyType.caption)
+                                .foregroundStyle(Theme.muted)
+
+                            ForEach(proposedDates.indices, id: \.self) { index in
+                                DatePicker(
+                                    "Option \(index + 1)",
+                                    selection: $proposedDates[index],
+                                    in: Date()...
+                                )
+                                .font(RallyType.meta)
+                                .tint(RallyPalette.ink)
+                                .padding(.horizontal, 18)
+                                .frame(height: 54)
+                                .background(Theme.surface2, in: Capsule())
+                            }
 
                             TextField("Venue or court", text: $venue)
-                                .font(Theme.ui(14))
-                                .padding(13)
-                                .background(Theme.faint, in: RoundedRectangle(cornerRadius: 14))
+                                .font(RallyType.body())
+                                .padding(.horizontal, 18)
+                                .frame(height: 54)
+                                .background(Theme.surface2, in: Capsule())
 
                             if (sport ?? app.activeSport).category == .individual {
                                 MinimalChoiceBar(
@@ -92,44 +108,36 @@ struct ChallengeComposerView: View {
                     challengeField(title: "Message / optional") {
                         TextField("Add a note, e.g. best of 3", text: $note, axis: .vertical)
                             .lineLimit(3...5)
-                            .font(Theme.ui(14))
+                            .font(RallyType.body())
                             .foregroundStyle(Theme.ink)
-                            .padding(14)
-                            .frame(minHeight: 92, alignment: .topLeading)
-                            .background(Theme.faint, in: RoundedRectangle(cornerRadius: 14))
+                            .padding(18)
+                            .frame(minHeight: 108, alignment: .topLeading)
+                            .background(Theme.surface2, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
                     }
 
-                    Button {
+                    RallyPillButton(title: "Send challenge", icon: "arrow.right", style: .ink, fill: true) {
                         if matchMode == .rated && isRatingMismatch {
                             showUnratedWarning = true
                         } else {
                             sendChallenge(isRatingExempt: matchMode == .casual)
                         }
-                    } label: {
-                        HStack {
-                            Text("Send challenge")
-                            Spacer()
-                            Image(systemName: "arrow.right")
-                        }
-                        .font(Theme.ui(15, weight: .bold))
-                        .foregroundStyle(Theme.bg)
-                        .padding(.horizontal, 20)
-                        .frame(height: 56)
-                        .background(app.themeColor, in: RoundedRectangle(cornerRadius: 18))
                     }
-                    .buttonStyle(SorbetScaleButtonStyle())
+                    }
+                    .id("challengeTop")
+                    .padding(.horizontal, RallyLayout.gutter)
+                    .padding(.top, 28)
+                    .padding(.bottom, 48)
                 }
-                .padding(20)
+                .onAppear {
+                    DispatchQueue.main.async {
+                        proxy.scrollTo("challengeTop", anchor: .top)
+                    }
+                }
             }
-            .background(Theme.bg)
-            .navigationTitle("Send Challenge")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Theme.bg, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { CloseIconButton { dismiss() } }
-            }
+
+            CloseIconButton { dismiss() }
+                .padding(.top, 24)
+                .padding(.trailing, RallyLayout.gutter)
         }
         .preferredColorScheme(.light)
         .onAppear { sport = app.activeSport }
@@ -154,9 +162,6 @@ struct ChallengeComposerView: View {
                 .foregroundStyle(Theme.muted)
             content()
         }
-        .padding(15)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.hairline, lineWidth: 1))
     }
 
     private var playerStatus: String {
@@ -175,7 +180,8 @@ struct ChallengeComposerView: View {
         app.createChallenge(
             with: player,
             sport: sport ?? app.activeSport,
-            date: date,
+            date: proposedDates[0],
+            proposedDates: proposedDates,
             venue: venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Venue TBD" : venue,
             note: note,
             isRatingExempt: isRatingExempt

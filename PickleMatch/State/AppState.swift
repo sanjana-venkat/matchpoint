@@ -474,13 +474,15 @@ final class AppState: ObservableObject {
         send(.faceOff(fo), to: player.id)
     }
 
-    func createChallenge(with player: Player, sport: Sport, date: Date, venue: String,
+    func createChallenge(with player: Player, sport: Sport, date: Date, proposedDates: [Date] = [], venue: String,
                          note: String, isRatingExempt: Bool = false) {
+        let options = proposedDates.isEmpty ? [date] : proposedDates
         let challenge = FaceOff(
             sport: sport,
             opponentId: player.id,
             opponentName: player.name,
             date: date,
+            proposedDates: options,
             venue: venue,
             wager: "No wager",
             state: .proposed,
@@ -488,7 +490,10 @@ final class AppState: ObservableObject {
         )
         faceOffs.append(challenge)
         send(.challenge(Challenge(wager: "No wager proposed", note: note)), to: player.id)
-        send(.system("Challenge proposed: \(sport.title) · \(date.formatted(date: .abbreviated, time: .shortened)) · \(venue)."), to: player.id)
+        let formattedOptions = options
+            .map { $0.formatted(date: .abbreviated, time: .shortened) }
+            .joined(separator: " · ")
+        send(.system("Challenge proposed: \(sport.title) · \(formattedOptions) · \(venue)."), to: player.id)
     }
 
     @discardableResult

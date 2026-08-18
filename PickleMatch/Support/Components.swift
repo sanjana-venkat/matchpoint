@@ -172,32 +172,28 @@ struct MinimalChoiceBar: View {
     @Binding var selection: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(options, id: \.self) { option in
                 let isSelected = selection == option
                 Button {
-                    withAnimation(.easeOut(duration: 0.14)) { selection = option }
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selection = option }
                 } label: {
                     Text(option)
-                        .font(Theme.ui(13, weight: .semibold))
+                        .font(RallyType.action)
                         .foregroundStyle(isSelected ? Theme.bg : Theme.muted)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
                         .background(
                             isSelected ? Theme.ink : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 12)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? Theme.hairline : Color.clear, lineWidth: 1)
+                            in: Capsule()
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RallyPressStyle())
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
         .padding(4)
-        .background(Theme.faint, in: RoundedRectangle(cornerRadius: 16))
+        .background(Theme.faint, in: Capsule())
     }
 }
 

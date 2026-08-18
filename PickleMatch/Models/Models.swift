@@ -416,6 +416,9 @@ struct FaceOff: Identifiable, Codable, Equatable {
     var sideALabel: String? = nil
     var sideBLabel: String? = nil
     var date: Date
+    /// Candidate times supplied with a challenge. The first becomes `date`
+    /// when the challenge is created and remains the calendar fallback.
+    var proposedDates: [Date] = []
     var venue: String
     var wager: String
     var state: FaceOffState = .proposed

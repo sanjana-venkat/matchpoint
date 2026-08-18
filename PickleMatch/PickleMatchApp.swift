@@ -32,7 +32,11 @@ struct RootView: View {
                 }
             } else {
 #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-demo-chat"),
+            if ProcessInfo.processInfo.arguments.contains("-demo-native-thread"),
+               app.hasCompletedOnboarding,
+               let conversation = app.conversations.first {
+                NativeChatScreen(conversation: conversation)
+            } else if ProcessInfo.processInfo.arguments.contains("-demo-chat"),
                app.hasCompletedOnboarding,
                let conversation = app.conversations.first {
                 NavigationStack {

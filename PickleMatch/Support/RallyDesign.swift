@@ -217,12 +217,13 @@ struct RallyPlayerAvatar: View {
     let player: Player
     var size: CGFloat = 48
     var ring = RallyPalette.cream
+    var ringWidth: CGFloat? = nil
 
     var body: some View {
         RallyPhoto(name: player.rallyPhotoName)
             .frame(width: size, height: size)
             .clipShape(Circle())
-            .overlay(Circle().stroke(ring, lineWidth: max(2, size * 0.055)))
+            .overlay(Circle().stroke(ring, lineWidth: ringWidth ?? max(2, size * 0.055)))
             .accessibilityLabel(player.name)
     }
 }
