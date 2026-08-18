@@ -11,8 +11,9 @@ struct OnboardingFlowView: View {
     @State private var profiles: [Sport: SportProfile] = [:]
     @State private var step: Int
 
-    private let sportsSetupStep = 4
-    private let detailsStep = 5
+    private let detailsStep = 3
+    private let sportsStep = 4
+    private let sportsSetupStep = 5
     private let welcomeStep = 6
     private let totalSteps = 7
 
@@ -23,7 +24,7 @@ struct OnboardingFlowView: View {
            arguments.indices.contains(flag + 1),
            let requested = Int(arguments[flag + 1]) {
             _step = State(initialValue: max(0, requested))
-            if requested >= 4 {
+            if requested >= 5 {
                 let previewSports: [Sport] = [.pickleball, .badminton, .soccer]
                 _selectedSports = State(initialValue: previewSports)
                 _profiles = State(initialValue: Dictionary(uniqueKeysWithValues: previewSports.map { sport in
@@ -46,7 +47,9 @@ struct OnboardingFlowView: View {
                 switch step {
                 case 0, 1, 2:
                     WelcomeStory(page: step, onContinue: next)
-                case 3:
+                case detailsStep:
+                    IdentitySetupStep(me: $me, onFinish: next)
+                case sportsStep:
                     SportSelectionStep(selected: $selectedSports) {
                         seedProfiles()
                         next()
@@ -55,10 +58,8 @@ struct OnboardingFlowView: View {
                     ConsolidatedSportsSetupStep(
                         sports: selectedSports,
                         profiles: $profiles,
-                        onContinue: next
+                        onContinue: finish
                     )
-                case detailsStep:
-                    IdentitySetupStep(me: $me, onFinish: finish)
                 default:
                     WelcomeLoadingView(name: me.name)
                 }
@@ -185,7 +186,7 @@ private struct ConsolidatedSportsSetupStep: View {
                 .padding(.bottom, 12)
             }
 
-            FlowCTA(title: "Continue to profile", action: onContinue)
+            FlowCTA(title: "Finish setup", action: onContinue)
                 .padding(20)
                 .background(Theme.bg)
         }
@@ -749,7 +750,7 @@ private struct IdentitySetupStep: View {
                     )
                 )
 
-                FlowCTA(title: "Create profile", enabled: canFinish, action: onFinish)
+                FlowCTA(title: "Continue to sports", enabled: canFinish, action: onFinish)
             }
             .padding(20)
         }

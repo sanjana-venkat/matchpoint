@@ -1,242 +1,369 @@
 import SwiftUI
 
-/// A focused player profile sheet that uses the same quiet, editorial hierarchy
-/// as the rest of Match Point. Summary information appears once, followed by
-/// sport statistics and actions.
+/// Feature-parity version of Sashank's player drawer, painted in Rally's visual language.
 struct ProfileDetailView: View {
     let player: Player
-    @EnvironmentObject var app: AppState
+    @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var openChat = false
-    @State private var showChallenge = false
+    @State private var notice: String?
 
     private var profile: SportProfile? { player.profile(app.activeSport) }
+    private var conversation: Conversation? { app.conversation(with: player.id) }
+    private var isBlocked: Bool { conversation?.isBlocked == true }
+    private var otherSports: [Sport] {
+        player.profiles.keys
+            .filter { $0 != app.activeSport }
+            .sorted { $0.title < $1.title }
+    }
+    private var mutualPlayers: [Player] {
+        app.players.filter { app.friendIds.contains($0.id) && $0.id != player.id }.prefix(6).map { $0 }
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    identityBlock
+            ZStack(alignment: .top) {
+                RallyPalette.cream.ignoresSafeArea()
 
-                    if let profile {
-                        statBlock(profile)
-                        aboutBlock(profile)
-                    } else {
-                        aboutBlock(nil)
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        drawerHeader
+                        aboutSection
+                        sportRatingsSection
+                        mediaRow
+                        mutualConnectionsSection
+                        connectButton
+                        blockButton
+                    }
+                    .padding(.horizontal, RallyLayout.gutter)
+                    .padding(.top, 12)
+                    .padding(.bottom, 28)
+                }
+
+                if let notice {
+                    Text(notice)
+                        .font(RallyType.caption)
+                        .foregroundStyle(RallyPalette.cream)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 44)
+                        .background(RallyPalette.ink, in: Capsule())
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(4)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $openChat) {
+                if let conversation = app.conversation(with: player.id) {
+                    ChatView(conversationId: conversation.id)
+                }
+            }
+        }
+        .preferredColorScheme(.light)
+    }
+
+    private var drawerHeader: some View {
+        VStack(spacing: 12) {
+            Capsule()
+                .fill(RallyPalette.ink.opacity(0.18))
+                .frame(width: 42, height: 4)
+
+            HStack(spacing: 12) {
+                RallyPhoto(name: player.rallyPhotoName)
+                    .frame(width: 58, height: 58)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(RallyPalette.sun, lineWidth: 2))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(player.name)
+                        .font(RallyType.cardTitle)
+                        .foregroundStyle(RallyPalette.ink)
+                        .lineLimit(1)
+                    Text("@\(displayUsername) · \(player.distanceMiles, specifier: "%.1f") miles away")
+                        .font(RallyType.caption)
+                        .foregroundStyle(RallyPalette.inkMuted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundStyle(RallyPalette.ink)
+                        .frame(width: 44, height: 44)
+                        .background(RallyPalette.creamDeep, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close profile")
+            }
+        }
+    }
+
+    private var aboutSection: some View {
+        sectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                eyebrow("About")
+                Text(player.bio)
+                    .font(RallyType.body(16))
+                    .foregroundStyle(RallyPalette.ink)
+                    .lineSpacing(3)
+                Divider().overlay(RallyPalette.rule)
+                keyValue("Age", "\(player.age)")
+                keyValue("Gender", player.gender.rawValue)
+            }
+        }
+    }
+
+    private var sportRatingsSection: some View {
+        sectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                eyebrow("Sport skill ratings")
+                HStack(spacing: 9) {
+                    SportIcon(sport: app.activeSport, size: 21)
+                    Text(app.activeSport.title)
+                        .font(RallyType.body(16, weight: .semibold))
+                    Spacer()
+                    Text(ratingLabel)
+                        .font(RallyType.numeral(18))
+                }
+
+                if !otherSports.isEmpty {
+                    Text("They also play \(formattedOtherSports).")
+                        .font(RallyType.caption)
+                        .foregroundStyle(RallyPalette.inkMuted)
+                }
+            }
+        }
+    }
+
+    private var mediaRow: some View {
+        Button {
+            showNotice("Shared media is simulated in this prototype.")
+        } label: {
+            HStack(spacing: 12) {
+                MediaLineIcon()
+                    .stroke(RallyPalette.ink, style: .init(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+                    .frame(width: 22, height: 22)
+                Text("Media, links, and documents")
+                    .font(RallyType.body(15, weight: .semibold))
+                    .foregroundStyle(RallyPalette.ink)
+                Spacer()
+                Text("12")
+                    .font(RallyType.caption)
+                    .foregroundStyle(RallyPalette.inkMuted)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(RallyPalette.inkMuted)
+            }
+            .padding(17)
+            .background(RallyPalette.creamDeep.opacity(0.58), in: RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var mutualConnectionsSection: some View {
+        sectionCard {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(spacing: 10) {
+                    ConnectionsLineIcon()
+                        .stroke(RallyPalette.ink, style: .init(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+                        .frame(width: 23, height: 23)
+                    Text("\(mutualConnectionCount) connections in common")
+                        .font(RallyType.body(15, weight: .semibold))
+                }
+
+                HStack(spacing: -9) {
+                    ForEach(mutualPlayers) { mutual in
+                        RallyPhoto(name: mutual.rallyPhotoName)
+                            .frame(width: 36, height: 36)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(RallyPalette.cream, lineWidth: 2))
                     }
                 }
-                .padding(.horizontal, DesignSystem.Metrics.screenPadding)
-                .padding(.top, 12)
-                .padding(.bottom, 28)
-            }
-            .background(Theme.bg)
-            .safeAreaInset(edge: .bottom) { actionBar }
-            .navigationTitle("Player profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Theme.bg, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    CloseIconButton { dismiss() }
-                }
-            }
-            .navigationDestination(isPresented: $openChat) {
-                if let convo = app.conversation(with: player.id) {
-                    ChatView(conversationId: convo.id)
-                }
-            }
-            .sheet(isPresented: $showChallenge) {
-                ChallengeComposerView(player: player)
             }
         }
     }
 
-    private var identityBlock: some View {
-        ZStack(alignment: .bottomLeading) {
-            RallyPhoto(name: player.rallyPhotoName)
-                .frame(height: 330)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .overlay(RallyPalette.photoScrim)
-
-            VStack(alignment: .leading, spacing: 8) {
-                RallySportTag(sport: app.activeSport)
-                Text(player.name)
-                    .font(RallyType.title)
-                    .foregroundStyle(RallyPalette.cream)
-                    .rallyDisplayLeading()
-                Label(
-                    "Age \(player.age) · \(String(format: "%.1f", player.distanceMiles)) miles · \(player.city)",
-                    systemImage: "location.fill"
-                )
-                .font(RallyType.caption)
-                .foregroundStyle(RallyPalette.creamMuted)
-            }
-            .padding(22)
-
-            RallyRatingPlate(
-                sport: app.activeSport,
-                profile: profile,
-                diameter: 82
-            )
-            .rallyLifted(0.8)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .offset(x: 8, y: -18)
-        }
-        .frame(height: 330)
-        .clipShape(RoundedRectangle(cornerRadius: RallyLayout.photoRadius, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-
-    private func statBlock(_ profile: SportProfile) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("\(app.activeSport.title) overview")
-
+    private var connectButton: some View {
+        Button(action: handleConnection) {
             HStack(spacing: 10) {
-                statTile("\(profile.rating)", "Rating")
-                statTile(EloRating.tier(for: profile.rating), "Tier")
-                statTile(profile.partnerStatus.short, "Status")
+                ConnectLineIcon()
+                    .stroke(connectButtonForeground, style: .init(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                    .frame(width: 20, height: 20)
+                Text(connectButtonTitle)
+                    .font(RallyType.action)
             }
+            .foregroundStyle(connectButtonForeground)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(connectButtonBackground, in: Capsule())
         }
+        .buttonStyle(.plain)
     }
 
-    private func statTile(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(value)
-                .font(Theme.ui(15, weight: .semibold))
-                .foregroundStyle(Theme.ink)
-                .lineLimit(label == "Status" ? 2 : 1)
-                .minimumScaleFactor(0.56)
-            Text(label)
-                .font(Theme.ui(12, weight: .medium))
-                .foregroundStyle(Theme.muted)
-        }
-        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cardCorner))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.cardCorner)
-                .stroke(Theme.hairline, lineWidth: 1)
-        }
-    }
-
-    private func aboutBlock(_ profile: SportProfile?) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("About \(player.name.components(separatedBy: " ").first ?? player.name)")
-
-            Text(player.bio)
-                .font(Theme.ui(16))
-                .foregroundStyle(Theme.ink)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let profile {
-                Divider()
-
-                if !profile.homeCourt.isEmpty {
-                    infoRow(
-                        title: "Home court",
-                        value: profile.homeCourt,
-                        systemImage: "figure.pickleball"
-                    )
-                }
-
-                infoRow(
-                    title: "Playing style",
-                    value: profile.selfAssessment.rawValue,
-                    systemImage: "figure.mind.and.body"
-                )
-
-                infoRow(
-                    title: "Looking for",
-                    value: profile.partnerStatus.short,
-                    systemImage: profile.partnerStatus.systemImage
-                )
+    private var blockButton: some View {
+        Button {
+            app.toggleBlock(player.id)
+            showNotice(isBlocked ? "\(player.name) has been unblocked." : "\(player.name) has been blocked.")
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "nosign")
+                    .font(.system(size: 15, weight: .semibold))
+                Text(isBlocked ? "Unblock \(player.name)" : "Block \(player.name)")
+                    .font(RallyType.body(15, weight: .semibold))
+                Spacer()
             }
+            .foregroundStyle(RallyPalette.danger)
+            .padding(.horizontal, 17)
+            .frame(minHeight: 54)
+            .overlay(
+                RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous)
+                    .stroke(RallyPalette.danger.opacity(0.28), lineWidth: 1)
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cardCorner))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.cardCorner)
-                .stroke(Theme.hairline, lineWidth: 1)
+        .buttonStyle(.plain)
+    }
+
+    private var ratingLabel: String {
+        guard let profile else { return "Not set" }
+        if app.activeSport.category == .group { return "Peer rated" }
+        return profile.ratingOptOut ? "Unrated" : "\(profile.rating)"
+    }
+
+    private var displayUsername: String {
+        let trimmed = player.username.replacingOccurrences(of: "@", with: "")
+        return trimmed.isEmpty
+            ? player.name.lowercased().replacingOccurrences(of: " ", with: "_")
+            : trimmed
+    }
+
+    private var formattedOtherSports: String {
+        let names = otherSports.map(\.title)
+        if names.count == 1 { return names[0] }
+        if names.count == 2 { return names.joined(separator: " and ") }
+        return names.dropLast().joined(separator: ", ") + ", and " + (names.last ?? "")
+    }
+
+    private var mutualConnectionCount: Int {
+        guard !mutualPlayers.isEmpty else { return min(5, max(0, app.displayedFriendCount)) }
+        return min(5, mutualPlayers.count)
+    }
+
+    private var connectButtonTitle: String {
+        switch app.friendshipState(with: player.id) {
+        case .friends: return "Open the chat"
+        case .outgoing: return "Awaiting their reply"
+        case .incoming: return "Accept connection"
+        case .none: return conversation == nil ? "Connect" : "Open the chat"
         }
     }
 
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(Theme.heading(18))
-            .foregroundStyle(Theme.ink)
+    private var connectButtonBackground: Color {
+        app.friendshipState(with: player.id) == .outgoing ? RallyPalette.creamDeep : RallyPalette.ink
     }
 
-    private func infoRow(title: String, value: String, systemImage: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Theme.muted)
-                .frame(width: 20)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Theme.ui(12, weight: .medium))
-                    .foregroundStyle(Theme.muted)
-                Text(value)
-                    .font(Theme.ui(15, weight: .medium))
-                    .foregroundStyle(Theme.ink)
-            }
-        }
-        .accessibilityElement(children: .combine)
+    private var connectButtonForeground: Color {
+        app.friendshipState(with: player.id) == .outgoing ? RallyPalette.inkMuted : RallyPalette.cream
     }
 
-    private var actionBar: some View {
-        HStack(spacing: 12) {
-            profileAction(
-                title: "Message",
-                systemImage: "bubble.left",
-                filled: false
-            ) {
-                app.like(player)
+    private func handleConnection() {
+        switch app.friendshipState(with: player.id) {
+        case .friends:
+            app.like(player)
+            openChat = true
+        case .outgoing:
+            if conversation != nil { openChat = true }
+        case .incoming:
+            app.acceptFriendRequest(from: player.id)
+            app.like(player)
+            openChat = true
+        case .none:
+            if conversation != nil {
                 openChat = true
-            }
-
-            profileAction(
-                title: "Create challenge",
-                systemImage: "flag.checkered",
-                filled: true
-            ) {
+            } else {
+                app.sendFriendRequest(to: player.id)
                 app.like(player)
-                showChallenge = true
             }
-        }
-        .padding(.horizontal, DesignSystem.Metrics.screenPadding)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(RallyPalette.cream.opacity(0.96))
-        .overlay(alignment: .top) {
-            Rectangle().fill(Theme.hairline).frame(height: 1)
         }
     }
 
-    private func profileAction(
-        title: String,
-        systemImage: String,
-        filled: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(Theme.ui(14, weight: .semibold))
-                .foregroundStyle(filled ? Theme.surface : Theme.ink)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(
-                    filled ? Theme.ink : Theme.surface,
-                    in: RoundedRectangle(cornerRadius: Theme.cardCorner)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: Theme.cardCorner)
-                        .stroke(Theme.ink, lineWidth: filled ? 0 : 1)
-                }
+    private func showNotice(_ text: String) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { notice = text }
+        Task {
+            try? await Task.sleep(for: .seconds(2.2))
+            withAnimation(.easeOut(duration: 0.18)) { notice = nil }
         }
-        .buttonStyle(SorbetScaleButtonStyle())
+    }
+
+    private func sectionCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(RallyPalette.creamDeep.opacity(0.38), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous)
+                    .stroke(RallyPalette.rule, lineWidth: 1)
+            )
+    }
+
+    private func eyebrow(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(RallyType.eyebrow)
+            .tracking(1.5)
+            .foregroundStyle(RallyPalette.inkMuted)
+    }
+
+    private func keyValue(_ key: String, _ value: String) -> some View {
+        HStack {
+            Text(key).foregroundStyle(RallyPalette.inkMuted)
+            Spacer()
+            Text(value).fontWeight(.semibold).foregroundStyle(RallyPalette.ink)
+        }
+        .font(RallyType.body(15))
+    }
+}
+
+private struct MediaLineIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRoundedRect(in: rect.insetBy(dx: 2, dy: 3), cornerSize: .init(width: 3, height: 3))
+        path.addEllipse(in: CGRect(x: rect.width * 0.61, y: rect.height * 0.24, width: rect.width * 0.14, height: rect.height * 0.14))
+        path.move(to: .init(x: rect.width * 0.15, y: rect.height * 0.70))
+        path.addLine(to: .init(x: rect.width * 0.40, y: rect.height * 0.47))
+        path.addLine(to: .init(x: rect.width * 0.56, y: rect.height * 0.61))
+        path.addLine(to: .init(x: rect.width * 0.70, y: rect.height * 0.50))
+        path.addLine(to: .init(x: rect.width * 0.85, y: rect.height * 0.67))
+        return path
+    }
+}
+
+private struct ConnectionsLineIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addEllipse(in: CGRect(x: rect.width * 0.10, y: rect.height * 0.12, width: rect.width * 0.30, height: rect.height * 0.30))
+        path.addEllipse(in: CGRect(x: rect.width * 0.58, y: rect.height * 0.12, width: rect.width * 0.30, height: rect.height * 0.30))
+        path.move(to: .init(x: rect.width * 0.02, y: rect.height * 0.86))
+        path.addQuadCurve(to: .init(x: rect.width * 0.48, y: rect.height * 0.86), control: .init(x: rect.width * 0.25, y: rect.height * 0.40))
+        path.move(to: .init(x: rect.width * 0.52, y: rect.height * 0.86))
+        path.addQuadCurve(to: .init(x: rect.width * 0.98, y: rect.height * 0.86), control: .init(x: rect.width * 0.75, y: rect.height * 0.40))
+        return path
+    }
+}
+
+private struct ConnectLineIcon: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: .init(x: rect.width * 0.40, y: rect.height * 0.66))
+        path.addLine(to: .init(x: rect.width * 0.29, y: rect.height * 0.77))
+        path.addQuadCurve(to: .init(x: rect.width * 0.12, y: rect.height * 0.60), control: .init(x: rect.width * 0.17, y: rect.height * 0.78))
+        path.addLine(to: .init(x: rect.width * 0.34, y: rect.height * 0.38))
+        path.addQuadCurve(to: .init(x: rect.width * 0.51, y: rect.height * 0.55), control: .init(x: rect.width * 0.51, y: rect.height * 0.43))
+        path.move(to: .init(x: rect.width * 0.60, y: rect.height * 0.34))
+        path.addLine(to: .init(x: rect.width * 0.71, y: rect.height * 0.23))
+        path.addQuadCurve(to: .init(x: rect.width * 0.88, y: rect.height * 0.40), control: .init(x: rect.width * 0.83, y: rect.height * 0.22))
+        path.addLine(to: .init(x: rect.width * 0.66, y: rect.height * 0.62))
+        path.addQuadCurve(to: .init(x: rect.width * 0.49, y: rect.height * 0.45), control: .init(x: rect.width * 0.49, y: rect.height * 0.57))
+        return path
     }
 }

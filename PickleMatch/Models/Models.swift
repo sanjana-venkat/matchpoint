@@ -435,6 +435,29 @@ struct FaceOff: Identifiable, Codable, Equatable {
     var source: MatchSource = .scheduled
 }
 
+enum GroupResultOutcome: String, Codable, CaseIterable {
+    case won = "Won"
+    case lost = "Lost"
+    case drawn = "Drawn"
+}
+
+struct GroupFixtureResult: Codable, Equatable {
+    var outcome: GroupResultOutcome
+    var summary: String
+}
+
+struct GroupFixture: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var sport: Sport
+    var title: String
+    var team: String
+    var opponent: String
+    var date: Date
+    var endDate: Date
+    var venue: String
+    var result: GroupFixtureResult? = nil
+}
+
 enum MatchOutcome: String, Codable, CaseIterable {
     case iWon = "I won"
     case theyWon = "They won"

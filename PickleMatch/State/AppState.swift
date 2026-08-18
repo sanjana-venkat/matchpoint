@@ -21,12 +21,14 @@ final class AppState: ObservableObject {
     @Published var players: [Player] = []
     @Published var conversations: [Conversation] = []
     @Published var faceOffs: [FaceOff] = []
+    @Published var groupFixtures: [GroupFixture] = []
     @Published var matchHistory: [MatchRecord] = []
     @Published var friendIds: Set<UUID> = []
     @Published var incomingFriendRequestIds: Set<UUID> = []
     @Published var outgoingFriendRequestIds: Set<UUID> = []
     @Published var friendCountOverride: Int = 0
     @Published var hasUnsavedDraft = false
+    @Published var notificationsMarkedRead = false
 
     // MARK: Discover filters (per session)
     @Published var filters = DiscoverFilters()
@@ -103,6 +105,19 @@ final class AppState: ObservableObject {
     var themeColor: Color { Theme.color(for: activeSport) }
     var hasMultipleSports: Bool { mySports.count > 1 }
     var displayedFriendCount: Int { max(friendIds.count, friendCountOverride) }
+    var notificationCount: Int {
+        guard !notificationsMarkedRead else { return 0 }
+        let verificationCount = faceOffs.filter {
+            $0.sport == activeSport && $0.state == .awaitingResult && $0.reportedWinnerByThem != nil
+        }.count
+        let challengeCount = faceOffs.filter {
+            $0.sport == activeSport && $0.state == .proposed && !$0.proposedByMe
+        }.count
+        let requestCount = players.filter {
+            incomingFriendRequestIds.contains($0.id) && $0.profile(activeSport) != nil
+        }.count
+        return requestCount + verificationCount + challengeCount
+    }
 
     // MARK: - Prototype states
 
@@ -112,11 +127,13 @@ final class AppState: ObservableObject {
         activeSport = .pickleball
         conversations = []
         faceOffs = []
+        groupFixtures = []
         matchHistory = []
         friendIds = []
         incomingFriendRequestIds = []
         outgoingFriendRequestIds = []
         friendCountOverride = 0
+        notificationsMarkedRead = false
         hasCompletedOnboarding = false
     }
 
@@ -124,6 +141,7 @@ final class AppState: ObservableObject {
         players = MockData.players()
         conversations = MockData.conversations(players: players)
         faceOffs = MockData.faceOffs(players: players)
+        groupFixtures = []
         matchHistory = MockData.matchHistory()
 
         var veteran = MockData.emptyMe()
@@ -169,10 +187,77 @@ final class AppState: ObservableObject {
         me = veteran
         mySports = [.pickleball, .badminton, .cricket]
         activeSport = .pickleball
-        friendIds = Set(players.map(\.id))
+        friendIds = Set(players.prefix(6).map(\.id))
         friendCountOverride = 42
-        incomingFriendRequestIds = []
+        incomingFriendRequestIds = Set(players.dropFirst(6).prefix(2).map(\.id))
         outgoingFriendRequestIds = []
+        notificationsMarkedRead = false
+
+        let calendar = Calendar.current
+        func fixtureDate(days: Int, hour: Int) -> Date {
+            let day = calendar.date(byAdding: .day, value: days, to: .now) ?? .now
+            return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
+        }
+        groupFixtures = [
+            GroupFixture(sport: .cricket, title: "League fixture", team: "Riverside XI", opponent: "Cedar Street CC", date: fixtureDate(days: 3, hour: 11), endDate: fixtureDate(days: 3, hour: 15), venue: "Roy G. Guerrero Cricket Ground"),
+            GroupFixture(sport: .cricket, title: "T20 cup", team: "Riverside XI", opponent: "East Austin Strikers", date: fixtureDate(days: 6, hour: 14), endDate: fixtureDate(days: 6, hour: 17), venue: "Fairmont Cricket Ground"),
+            GroupFixture(sport: .cricket, title: "League fixture", team: "Riverside XI", opponent: "North Loop CC", date: fixtureDate(days: -5, hour: 10), endDate: fixtureDate(days: -5, hour: 14), venue: "Zilker Cricket Field", result: GroupFixtureResult(outcome: .won, summary: "Won by 24 runs")),
+            GroupFixture(sport: .cricket, title: "Friendly", team: "Riverside XI", opponent: "Mueller XI", date: fixtureDate(days: -2, hour: 17), endDate: fixtureDate(days: -2, hour: 20), venue: "Mueller Sports Ground")
+        ]
+
+        // Sashank's established state includes score reports waiting for this
+        // player to verify, plus both incoming and outgoing challenge proposals.
+        // Keep these as real FaceOff records so every home action updates the
+        // same data shown in Chats, Matches, and the calendar.
+        for (index, opponent) in players.prefix(3).enumerated() {
+            faceOffs.append(
+                FaceOff(
+                    sport: .pickleball,
+                    opponentId: opponent.id,
+                    opponentName: opponent.name,
+                    date: Date().addingTimeInterval(TimeInterval(-(index + 2) * 86_400)),
+                    venue: ["Zilker Courts", "Riverside Courts", "Austin Pickle Ranch"][index],
+                    wager: "No wager",
+                    state: .awaitingResult,
+                    proposedByMe: false,
+                    reportedWinnerByThem: index == 1 ? .theyWon : .iWon,
+                    gameScores: index == 1
+                        ? [GameScore(myScore: 11, opponentScore: 7), GameScore(myScore: 11, opponentScore: 9)]
+                        : [GameScore(myScore: 8, opponentScore: 11), GameScore(myScore: 11, opponentScore: 9), GameScore(myScore: 6, opponentScore: 11)]
+                )
+            )
+        }
+        if players.count > 5 {
+            let first = Calendar.current.date(byAdding: .day, value: 2, to: .now) ?? .now
+            let second = Calendar.current.date(byAdding: .day, value: 3, to: .now) ?? .now
+            let third = Calendar.current.date(byAdding: .day, value: 5, to: .now) ?? .now
+            faceOffs.append(
+                FaceOff(
+                    sport: .pickleball,
+                    opponentId: players[4].id,
+                    opponentName: players[4].name,
+                    date: first,
+                    proposedDates: [first, second, third],
+                    venue: "Mueller Lake Park Courts",
+                    wager: "Bragging rights",
+                    state: .proposed,
+                    proposedByMe: false
+                )
+            )
+            faceOffs.append(
+                FaceOff(
+                    sport: .pickleball,
+                    opponentId: players[5].id,
+                    opponentName: players[5].name,
+                    date: second,
+                    proposedDates: [second, third],
+                    venue: "Riverside Courts",
+                    wager: "Loser buys coffee",
+                    state: .proposed,
+                    proposedByMe: true
+                )
+            )
+        }
 
         let baseConversations = conversations
         for sport in [Sport.badminton, .cricket] {
@@ -184,7 +269,19 @@ final class AppState: ObservableObject {
                 conversations.append(copy)
             }
         }
-        for index in conversations.indices { conversations[index].isMessageRequest = false }
+        for requestPlayer in players.dropFirst(6).prefix(2) {
+            conversations.append(
+                Conversation(
+                    partnerId: requestPlayer.id,
+                    sport: .pickleball,
+                    messages: [ChatMessage(fromMe: false, kind: .text("Would you like to play this week?"))],
+                    isMessageRequest: true
+                )
+            )
+        }
+        for index in conversations.indices {
+            conversations[index].isMessageRequest = incomingFriendRequestIds.contains(conversations[index].partnerId)
+        }
 
         let badmintonRecords = matchHistory.prefix(8).enumerated().map { index, original -> MatchRecord in
             var copy = original
@@ -305,6 +402,12 @@ final class AppState: ObservableObject {
         acceptFriendRequest(from: conversations[index].partnerId)
     }
 
+    func deleteMessageRequest(_ conversationId: UUID) {
+        guard let index = conversations.firstIndex(where: { $0.id == conversationId }) else { return }
+        incomingFriendRequestIds.remove(conversations[index].partnerId)
+        conversations.remove(at: index)
+    }
+
     func createGroupConversation(name: String, participantIds: [UUID]) -> Conversation? {
         let ids = Array(Set(participantIds))
         guard ids.count >= 2, let anchor = ids.first else { return nil }
@@ -415,6 +518,7 @@ final class AppState: ObservableObject {
     }
 
     func toggleBlock(_ playerId: UUID) {
+        ensureConversation(with: playerId)
         guard let idx = conversationIndex(playerId) else { return }
         conversations[idx].isBlocked.toggle()
     }
@@ -584,6 +688,40 @@ final class AppState: ObservableObject {
         faceOffs.append(faceOff)
         send(.faceOff(faceOff), to: firstId)
         return faceOff
+    }
+
+    func addGroupFixture(
+        sport: Sport,
+        title: String,
+        team: String,
+        opponent: String,
+        date: Date,
+        endDate: Date,
+        venue: String
+    ) {
+        groupFixtures.append(
+            GroupFixture(
+                sport: sport,
+                title: title,
+                team: team,
+                opponent: opponent,
+                date: date,
+                endDate: max(endDate, date.addingTimeInterval(3_600)),
+                venue: venue
+            )
+        )
+    }
+
+    func removeGroupFixture(_ id: UUID) {
+        groupFixtures.removeAll { $0.id == id }
+    }
+
+    func saveGroupFixtureResult(_ id: UUID, outcome: GroupResultOutcome, summary: String) {
+        guard let index = groupFixtures.firstIndex(where: { $0.id == id }) else { return }
+        groupFixtures[index].result = GroupFixtureResult(
+            outcome: outcome,
+            summary: summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
     }
 
     var upcomingFaceOffs: [FaceOff] {
