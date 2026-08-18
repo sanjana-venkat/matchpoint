@@ -390,9 +390,9 @@ private struct MultiSportSocialHero: View {
 
     private var imageName: String {
         switch variant {
-        case 0: return "OnboardingTournament"
-        case 1: return "OnboardingCourt"
-        default: return "OnboardingCommunity"
+        case 0: return "Rally-scene-court"
+        case 1: return "Rally-scene-paddles"
+        default: return "Rally-hero-serve"
         }
     }
 
@@ -652,7 +652,7 @@ private struct IdentitySetupStep: View {
                 }
                 .foregroundStyle(Theme.ink)
 
-                Text("Or choose from (Avatar.all.count) avatars")
+                Text("Or choose from \(Avatar.all.count) avatars")
                     .font(Theme.ui(11, weight: .bold))
                     .foregroundStyle(Theme.muted)
                 AvatarChoiceStrip(selection: $me.avatar, size: 62)

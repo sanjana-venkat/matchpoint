@@ -2,14 +2,14 @@ import SwiftUI
 
 /// Scoreline: a light, near-monochrome, typography-led athletic system.
 enum Scoreline {
-    static let ink = Color(hex: "F3F3F0")
-    static let surface = Color(hex: "FFFFFF")
-    static let surface2 = Color(hex: "E8E9E3")
-    static let hairline = Color.black.opacity(0.12)
-    static let textPrimary = Color(hex: "171815")
-    static let textSecondary = Color(hex: "62655D")
-    static let signal = Color(hex: "D83B20")
-    static let socialTeal = Color(hex: "2D6E78")
+    static let ink = RallyPalette.cream
+    static let surface = RallyPalette.cream
+    static let surface2 = RallyPalette.creamDeep
+    static let hairline = RallyPalette.rule
+    static let textPrimary = RallyPalette.ink
+    static let textSecondary = RallyPalette.inkMuted
+    static let signal = RallyPalette.sun
+    static let socialTeal = RallyPalette.court
 }
 
 enum DesignSystem {
@@ -27,10 +27,10 @@ enum DesignSystem {
     }
 
     enum Metrics {
-        static let cardRadius: CGFloat = 12
-        static let controlRadius: CGFloat = 12
-        static let pillRadius: CGFloat = 12
-        static let screenPadding: CGFloat = 20
+        static let cardRadius: CGFloat = RallyLayout.cardRadius
+        static let controlRadius: CGFloat = RallyLayout.insetRadius
+        static let pillRadius: CGFloat = 999
+        static let screenPadding: CGFloat = RallyLayout.gutter
         static let verticalRhythm: CGFloat = 16
         static let standardShadow = Color.black.opacity(0.10)
     }
@@ -72,10 +72,10 @@ enum Theme {
     static let warm = Scoreline.surface
 
     // Legacy semantic colors collapse into the monochrome system.
-    static let pink = Scoreline.signal
-    static let grape = Scoreline.textPrimary
+    static let pink = RallyPalette.danger
+    static let grape = RallyPalette.court
     static let blue = Scoreline.socialTeal
-    static let lime = Scoreline.textPrimary
+    static let lime = RallyPalette.sun
     static let badminton = Scoreline.textPrimary
 
     static func color(for sport: Sport) -> Color { Scoreline.textPrimary }
@@ -83,17 +83,15 @@ enum Theme {
 
     /// Condensed heavy italic is exclusive to ratings, scores, and statistics.
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .heavy, design: .default)
-        .width(.compressed)
-        .italic()
+        RallyType.numeral(size)
     }
 
     static func heading(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .bold, design: .default)
+        RallyType.display(size)
     }
 
     static func ui(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        RallyType.body(size, weight: weight)
     }
 }
 
@@ -109,7 +107,7 @@ extension View {
             .font(Theme.ui(15))
             .toolbarBackground(Theme.bg, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
     }
 }
 

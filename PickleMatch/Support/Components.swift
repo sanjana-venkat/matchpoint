@@ -427,14 +427,13 @@ struct BottomCTA: View {
                 if let leadingSystemImage { Image(systemName: leadingSystemImage) }
                 Text(title).font(Theme.ui(15, weight: .semibold))
                 Spacer()
-                Image(systemName: "arrow.right").foregroundStyle(enabled ? Theme.signal : Theme.muted)
+                Image(systemName: "arrow.right").foregroundStyle(enabled ? RallyPalette.sun : Theme.muted)
             }
-            .foregroundStyle(enabled ? Theme.ink : Theme.muted)
+            .foregroundStyle(enabled ? RallyPalette.cream : Theme.muted)
             .padding(.horizontal, DesignSystem.Metrics.screenPadding)
             .frame(height: 52)
-            .background(enabled ? Theme.surface2 : Theme.surface,
-                        in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.hairline, lineWidth: 1))
+            .background(enabled ? RallyPalette.ink : Theme.surface2, in: Capsule())
+            .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
         }
         .buttonStyle(SorbetScaleButtonStyle())
         .disabled(!enabled)

@@ -18,7 +18,10 @@ struct PickleMatchApp: App {
 /// then shows the main tabbed experience.
 struct RootView: View {
     @EnvironmentObject var app: AppState
-    @State private var selectedPrototype = ProcessInfo.processInfo.arguments.contains("-demo-established")
+    @State private var selectedPrototype = {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("-demo-established") || arguments.contains("-demo-new")
+    }()
 
     var body: some View {
         Group {

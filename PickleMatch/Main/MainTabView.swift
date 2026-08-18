@@ -210,19 +210,17 @@ struct SportModeToggle: View {
     }
 }
 
-private struct QuickChallengeSheet: View {
+struct QuickChallengeSheet: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlayerId: UUID?
     @State private var note = ""
-    @State private var wager = "No wager"
 
     private var candidates: [Player] { app.players.filter { $0.profile(app.activeSport) != nil } }
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
-                MatchPointLogo()
                 Text("Add a challenge").font(Theme.heading(29))
                 Text("Choose a player, add the format, and send the invitation in one step.")
                     .font(Theme.ui(13)).foregroundStyle(Theme.muted)
@@ -235,12 +233,20 @@ private struct QuickChallengeSheet: View {
                 TextField("Challenge details", text: $note, axis: .vertical)
                     .lineLimit(3...6)
                     .padding(14).background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
-                TextField("Wager or “No wager”", text: $wager)
-                    .padding(14).background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+                Text("You can decide on an optional wager together in chat after the challenge is accepted.")
+                    .font(Theme.ui(12))
+                    .foregroundStyle(Theme.muted)
                 Spacer()
                 BottomCTA(title: "Send challenge", enabled: selectedPlayerId != nil) {
-                    guard let selectedPlayerId else { return }
-                    app.send(.challenge(Challenge(wager: wager, note: note)), to: selectedPlayerId)
+                    guard let selectedPlayerId, let player = app.player(selectedPlayerId) else { return }
+                    app.createChallenge(
+                        with: player,
+                        sport: app.activeSport,
+                        date: Date().addingTimeInterval(86_400),
+                        venue: player.profile(app.activeSport)?.homeCourt ?? "Venue to be decided",
+                        note: note.isEmpty ? "Let’s play." : note,
+                        isRatingExempt: app.isRatingExempt(opponentIds: [player.id], sport: app.activeSport)
+                    )
                     app.hasUnsavedDraft = false
                     dismiss()
                 }

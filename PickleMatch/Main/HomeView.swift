@@ -743,7 +743,7 @@ struct PlayerQuickSheet: View {
     }
 }
 
-private struct PeerRatingSheet: View {
+struct PeerRatingSheet: View {
     let player: Player
     let sport: Sport
     @EnvironmentObject private var app: AppState

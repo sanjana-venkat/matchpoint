@@ -264,7 +264,7 @@ private struct ConversationSticker: View {
     }
 }
 
-private struct GroupChatComposer: View {
+struct GroupChatComposer: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""

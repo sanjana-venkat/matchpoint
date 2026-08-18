@@ -53,36 +53,39 @@ struct ProfileDetailView: View {
     }
 
     private var identityBlock: some View {
-        HStack(alignment: .center, spacing: 18) {
-            AvatarView(avatar: player.avatar, size: 92)
+        ZStack(alignment: .bottomLeading) {
+            RallyPhoto(name: player.rallyPhotoName)
+                .frame(height: 330)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .overlay(RallyPalette.photoScrim)
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 8) {
+                RallySportTag(sport: app.activeSport)
                 Text(player.name)
-                    .font(Theme.heading(28))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(2)
-
-                Text("Age \(player.age)")
-                    .font(Theme.ui(15, weight: .medium))
-                    .foregroundStyle(Theme.muted)
-
+                    .font(RallyType.title)
+                    .foregroundStyle(RallyPalette.cream)
+                    .rallyDisplayLeading()
                 Label(
-                    "\(String(format: "%.1f", player.distanceMiles)) miles away · \(player.city)",
+                    "Age \(player.age) · \(String(format: "%.1f", player.distanceMiles)) miles · \(player.city)",
                     systemImage: "location.fill"
                 )
-                .font(Theme.ui(14, weight: .medium))
-                .foregroundStyle(Theme.muted)
+                .font(RallyType.caption)
+                .foregroundStyle(RallyPalette.creamMuted)
             }
+            .padding(22)
 
-            Spacer(minLength: 0)
+            RallyRatingPlate(
+                sport: app.activeSport,
+                profile: profile,
+                diameter: 82
+            )
+            .rallyLifted(0.8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .offset(x: 8, y: -18)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Theme.cardCorner))
-        .overlay {
-            RoundedRectangle(cornerRadius: Theme.cardCorner)
-                .stroke(Theme.hairline, lineWidth: 1)
-        }
+        .frame(height: 330)
+        .clipShape(RoundedRectangle(cornerRadius: RallyLayout.photoRadius, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -101,10 +104,10 @@ struct ProfileDetailView: View {
     private func statTile(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(value)
-                .font(Theme.heading(16))
+                .font(Theme.ui(15, weight: .semibold))
                 .foregroundStyle(Theme.ink)
-                .lineLimit(2)
-                .minimumScaleFactor(0.72)
+                .lineLimit(label == "Status" ? 2 : 1)
+                .minimumScaleFactor(0.56)
             Text(label)
                 .font(Theme.ui(12, weight: .medium))
                 .foregroundStyle(Theme.muted)
@@ -208,7 +211,7 @@ struct ProfileDetailView: View {
         .padding(.horizontal, DesignSystem.Metrics.screenPadding)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .background(.ultraThinMaterial)
+        .background(RallyPalette.cream.opacity(0.96))
         .overlay(alignment: .top) {
             Rectangle().fill(Theme.hairline).frame(height: 1)
         }
