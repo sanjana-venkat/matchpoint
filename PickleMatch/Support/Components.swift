@@ -74,22 +74,16 @@ struct SportIcon: View {
     var color = Theme.ink
 
     var body: some View {
-        Group {
-            if let asset = sport.illustrationIconAsset {
-                RallyPhoto(name: asset, contentMode: .fit)
-            } else {
-                SportGlyphShape(sport: sport)
-                    .stroke(
-                        color,
-                        style: StrokeStyle(
-                            lineWidth: isSelected ? 2 : 1.6,
-                            lineCap: .round,
-                            lineJoin: .round
-                        )
-                    )
-                    .padding(size * 0.08)
-            }
-        }
+        SportGlyphShape(sport: sport)
+            .stroke(
+                color,
+                style: StrokeStyle(
+                    lineWidth: isSelected ? 2 : 1.6,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+            .padding(size * 0.08)
             .frame(width: size, height: size)
             .accessibilityHidden(true)
     }

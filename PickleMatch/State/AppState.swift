@@ -133,6 +133,7 @@ final class AppState: ObservableObject {
             activeSport = .pickleball
             hasCompletedOnboarding = true
             faceOffs.append(contentsOf: MockData.pendingVerifications(players: players))
+            faceOffs.append(contentsOf: MockData.sentVerifications(players: players))
             nearbyCommunities = MockData.nearbyCommunities()
         }
 #endif

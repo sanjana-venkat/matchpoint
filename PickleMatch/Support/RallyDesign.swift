@@ -271,21 +271,14 @@ struct RallyPhoto: View {
     }
 }
 
-/// The premium dimensional equipment artwork supplied for each sport.
-/// Falls back to the native line glyph if an asset is unavailable.
+/// Shared sport mark. MatchPoint uses one outline language throughout the app.
 struct RallySportAssetIcon: View {
     let sport: Sport
     var size: CGFloat = 28
     var fallbackColor: Color = RallyPalette.ink
 
     var body: some View {
-        Group {
-            if let name = sport.illustrationIconAsset {
-                RallyPhoto(name: name, contentMode: .fit)
-            } else {
-                SportIcon(sport: sport, size: size, color: fallbackColor)
-            }
-        }
+        SportIcon(sport: sport, size: size, color: fallbackColor)
         .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
@@ -409,7 +402,11 @@ struct RallySportSelector: View {
                     let active = sport == selection
                     Button { select(sport) } label: {
                         HStack(spacing: 8) {
-                            RallySportAssetIcon(sport: sport, size: 24)
+                            RallySportAssetIcon(
+                                sport: sport,
+                                size: 24,
+                                fallbackColor: active ? RallyPalette.cream : RallyPalette.ink
+                            )
                             Text(sport.title)
                                 .font(RallyType.action)
                         }

@@ -230,6 +230,26 @@ enum MockData {
         }
     }
 
+    static func sentVerifications(players: [Player]) -> [FaceOff] {
+        players.dropFirst(4).prefix(2).enumerated().map { index, opponent in
+            let scores = index == 0
+                ? [GameScore(myScore: 11, opponentScore: 8), GameScore(myScore: 11, opponentScore: 6)]
+                : [GameScore(myScore: 8, opponentScore: 11), GameScore(myScore: 11, opponentScore: 9), GameScore(myScore: 11, opponentScore: 7)]
+            return FaceOff(
+                sport: index == 0 ? .pickleball : .badminton,
+                opponentId: opponent.id,
+                opponentName: opponent.name,
+                date: Date().addingTimeInterval(TimeInterval(-(index + 1) * 43_200)),
+                venue: index == 0 ? "Mueller Courts" : "Austin Recreation Center",
+                wager: "No wager",
+                state: .awaitingResult,
+                proposedByMe: true,
+                reportedWinnerByMe: .iWon,
+                gameScores: scores
+            )
+        }
+    }
+
     static func nearbyCommunities() -> [NearbyCommunity] {
         [
             NearbyCommunity(
