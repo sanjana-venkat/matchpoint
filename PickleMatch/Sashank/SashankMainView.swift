@@ -1614,7 +1614,7 @@ private struct NativeMapScreen: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 20)
             .padding(.top, 76)
             .animation(.spring(response: 0.34, dampingFraction: 0.82), value: activeFilter)
             .animation(.easeOut(duration: 0.18), value: hasAppliedFilters)
@@ -1711,6 +1711,7 @@ private struct NativeMapScreen: View {
                     .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private func filterButton(_ panel: NativeMapFilterPanel, text: String, icon: String) -> some View {
@@ -1721,14 +1722,13 @@ private struct NativeMapScreen: View {
             filterChip(
                 text,
                 icon: icon,
-                width: filterPanelWidth(panel),
                 expanded: expanded
             )
         }
         .buttonStyle(RallyPressStyle())
     }
 
-    private func filterChip(_ text: String, icon: String, width: CGFloat, expanded: Bool) -> some View {
+    private func filterChip(_ text: String, icon: String, expanded: Bool) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
             Text(text)
@@ -1743,7 +1743,10 @@ private struct NativeMapScreen: View {
                 .rotationEffect(.degrees(expanded ? 180 : 0))
         }
         .font(.system(size: 11.5, weight: .semibold)).foregroundStyle(MP.ink)
-        .padding(.horizontal, 9).frame(width: width).frame(height: 44).background(MP.background, in: Capsule())
+        .padding(.horizontal, 9)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(MP.background, in: Capsule())
         .shadow(color: MP.shadow, radius: 4, y: 1)
     }
 
@@ -1775,17 +1778,9 @@ private struct NativeMapScreen: View {
             }
         }
         .padding(5)
-        .frame(width: filterPanelWidth(panel))
+        .frame(maxWidth: .infinity)
         .background(MP.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .rallyLifted(0.7)
-    }
-
-    private func filterPanelWidth(_ panel: NativeMapFilterPanel) -> CGFloat {
-        switch panel {
-        case .audience: 118
-        case .gender: 106
-        case .rating: 118
-        }
     }
 
     private func selectedOption(_ panel: NativeMapFilterPanel) -> String {
