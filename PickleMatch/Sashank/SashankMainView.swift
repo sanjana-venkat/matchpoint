@@ -531,7 +531,7 @@ private struct NativeHomeScreen: View {
                 HStack(spacing: 12) {
                     ForEach(activeChallenges.prefix(4)) { match in
                         Button { selectedChallenge = match } label: {
-                            PersonPoster(player: app.player(match.opponentId) ?? players[0], sport: match.sport, line1: match.date.formatted(date: .abbreviated, time: .shortened), line2: match.venue, badge: match.state == .proposed ? (match.proposedByMe ? "Awaiting reply" : "Needs your reply") : nil, badgeColor: MP.accent(match.sport))
+                            PersonPoster(player: app.player(match.opponentId) ?? players[0], sport: match.sport, line1: match.date.formatted(date: .abbreviated, time: .shortened), line2: match.venue, badge: match.state == .proposed ? (match.proposedByMe ? "Awaiting reply" : "Needs your reply") : nil, badgeColor: MP.accent(match.sport), reservesBadgeSpace: true)
                         }
                         .buttonStyle(.plain)
                     }
@@ -1155,6 +1155,11 @@ private struct PersonPoster: View {
     let line2: String
     let badge: String?
     let badgeColor: Color
+    var reservesBadgeSpace = false
+
+    private var usesBadgeRow: Bool {
+        badge != nil || reservesBadgeSpace
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -1198,10 +1203,10 @@ private struct PersonPoster: View {
                 }
             }
             .padding(12)
-            .frame(width: 158, height: badge == nil ? 82 : 116, alignment: .topLeading)
+            .frame(width: 158, height: usesBadgeRow ? 116 : 82, alignment: .topLeading)
             .background(MP.surface)
         }
-        .frame(width: 158, height: badge == nil ? 230 : 264, alignment: .topLeading)
+        .frame(width: 158, height: usesBadgeRow ? 264 : 230, alignment: .topLeading)
         .background(MP.surface)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(MP.strongLine, lineWidth: 1.4))
