@@ -12,14 +12,23 @@ struct SportSelectStep: View {
                     StepHeader(title: "What do you play?",
                                subtitle: "Choose one or both. You can add or remove sports anytime.")
 
-                    ForEach(Sport.allCases) { sport in
-                        SportCard(sport: sport, isSelected: selected.contains(sport)) {
-                            toggle(sport)
+                    ForEach(Sport.supported) { sport in
+                        VStack(alignment: .leading, spacing: 5) {
+                            SportCard(sport: sport, isSelected: selected.contains(sport)) {
+                                guard sport.isAvailableInBeta else { return }
+                                toggle(sport)
+                            }
+                            if !sport.isAvailableInBeta {
+                                Text("Coming soon")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Theme.muted)
+                                    .padding(.leading, 16)
+                            }
                         }
                     }
 
                     if selected.count > 1 {
-                        Label("You'll be able to switch between \(Sport.allCases.map(\.title).joined(separator: " & ")) modes from the top of the app.",
+                        Label("You can switch between Pickleball and Badminton from the top of the app.",
                               systemImage: "arrow.left.arrow.right.circle.fill")
                             .font(.footnote)
                             .foregroundStyle(Theme.accent)

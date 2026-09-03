@@ -749,13 +749,12 @@ struct PeerRatingSheet: View {
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
     @State private var values: [String: Int] = [:]
+    @State private var writtenReview = ""
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 17) {
-                    Text("Rate \(player.name.split(separator: " ").first.map(String.init) ?? player.name)")
-                        .font(Theme.heading(28))
                     Text("Peer feedback is attached to verified \(sport.title.lowercased()) games and shown as a Google-style average plus reviewer count.")
                         .font(Theme.ui(13))
                         .foregroundStyle(Theme.muted)
@@ -781,8 +780,41 @@ struct PeerRatingSheet: View {
                         .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
                     }
 
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Written review (optional)").font(Theme.heading(16))
+                            Spacer()
+                            Text("\(writtenReview.count)/500")
+                                .font(Theme.ui(11))
+                                .foregroundStyle(Theme.muted)
+                        }
+                        TextEditor(text: $writtenReview)
+                            .font(Theme.ui(14))
+                            .scrollContentBackground(.hidden)
+                            .frame(minHeight: 112)
+                            .padding(10)
+                            .background(Theme.bg, in: RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Theme.hairline, lineWidth: 1.2)
+                            )
+                            .onChange(of: writtenReview) { _, value in
+                                if value.count > 500 { writtenReview = String(value.prefix(500)) }
+                            }
+                        Text("Share useful, respectful context about what they were like to play with.")
+                            .font(Theme.ui(11))
+                            .foregroundStyle(Theme.muted)
+                    }
+                    .padding(16)
+                    .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18))
+
                     Button {
-                        app.submitPeerRatings(playerId: player.id, sport: sport, values: values)
+                        app.submitPeerRatings(
+                            playerId: player.id,
+                            sport: sport,
+                            values: values,
+                            writtenReview: writtenReview
+                        )
                         dismiss()
                     } label: {
                         Text("Submit peer ratings")
@@ -797,7 +829,14 @@ struct PeerRatingSheet: View {
                 .padding(20)
             }
             .background(Theme.bg)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cancel") { dismiss() } } }
+            .navigationTitle("Rate \(player.name.split(separator: " ").first.map(String.init) ?? player.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel("Close")
+                }
+            }
         }
         .preferredColorScheme(.light)
     }

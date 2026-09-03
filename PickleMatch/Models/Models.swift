@@ -15,6 +15,18 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
     case football
 
     var id: String { rawValue }
+
+    /// The six sports currently supported by Rally's production UI and asset set.
+    /// Legacy enum cases remain decodable for older local data but are not selectable.
+    static let supported: [Sport] = [
+        .pickleball, .badminton, .pingPong,
+        .volleyball, .cricket, .soccer
+    ]
+
+    /// Sports enabled for the first public beta. The remaining supported sports
+    /// stay visible in selection screens as a roadmap, but cannot be activated.
+    static let betaAvailable: [Sport] = [.pickleball, .badminton]
+    var isAvailableInBeta: Bool { Self.betaAvailable.contains(self) }
     var title: String {
         switch self {
         case .pingPong: return "Ping Pong"
@@ -36,15 +48,15 @@ enum Sport: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// Watercolour artwork supplied for content-level sport illustration.
+    /// Premium dimensional equipment artwork supplied for content-level sport illustration.
     var illustrationIconAsset: String? {
         switch self {
-        case .pickleball: "sport_pickleball"
-        case .badminton: "sport_badminton"
-        case .pingPong: "sport_pingpong"
-        case .cricket: "sport_cricket"
-        case .soccer: "sport_soccer"
-        case .volleyball: "sport_volleyball"
+        case .pickleball: "icon.pickleball"
+        case .badminton: "icon.badminton"
+        case .pingPong: "icon.tabletennis"
+        case .cricket: "icon.cricket"
+        case .soccer: "icon.soccer"
+        case .volleyball: "icon.volleyball"
         default: nil
         }
     }
@@ -140,20 +152,27 @@ struct PeerSkillRating: Identifiable, Codable, Hashable {
     var count: Int
 }
 
+struct PeerWrittenReview: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var reviewerName: String
+    var text: String
+    var createdAt: Date = .now
+}
+
 // MARK: - Avatars
 
-/// Selectable illustrated PickleMatch characters, with a symbol fallback.
+/// Selectable premium Rally portraits, with a symbol fallback.
 struct Avatar: Identifiable, Hashable, Codable {
     let id: String
     let imageName: String?
     let symbol: String
     let colorHex: String
 
-    private static let illustrated: [Avatar] = (1...20).map { index in
+    private static let illustrated: [Avatar] = (1...47).map { index in
         let identifier = String(format: "%02d", index)
         return Avatar(
-            id: "watercolor-\(identifier)",
-            imageName: "Avatar\(identifier)",
+            id: "rally-\(identifier)",
+            imageName: "avatar.\(identifier)",
             symbol: "person.fill",
             colorHex: "F7F4EC"
         )
@@ -189,6 +208,12 @@ struct Avatar: Identifiable, Hashable, Codable {
     }
 
     static let fallback = all[0]
+
+    static let illustratedChoices = illustrated
+
+    var portraitAssetName: String? {
+        imageName
+    }
 }
 
 // MARK: - Per-sport profile
@@ -199,9 +224,17 @@ struct SportProfile: Identifiable, Codable {
     var id: String { sport.rawValue }
     var sport: Sport
     var rating: Int = 80
+    /// Hidden confidence and record fields mirror the exact server-side rating state.
+    /// The app displays the rounded integer rating; Supabase retains decimal precision.
+    var uncertainty: Double = RatingConfiguration.matchPoint.initialUncertainty
+    var gamesPlayed: Int = 0
+    var wins: Int = 0
+    var losses: Int = 0
+    var draws: Int = 0
     var ratingOptOut: Bool = false
     var socialSkillLabel: SocialSkillLabel? = nil
     var peerSkillRatings: [PeerSkillRating] = []
+    var peerWrittenReviews: [PeerWrittenReview] = []
     var partnerStatus: PartnerStatus = .solo
     var homeCourt: String = ""
     var ownsEquipment: Bool = true
@@ -211,6 +244,7 @@ struct SportProfile: Identifiable, Codable {
     var ratingHistory: [RatingPoint] = []
 
     var usesElo: Bool { sport.category == .individual && !ratingOptOut }
+    var isProvisional: Bool { RatingEngine.isProvisional(gamesPlayed: gamesPlayed) }
 }
 
 struct RatingPoint: Identifiable, Codable, Hashable {
@@ -235,6 +269,10 @@ struct Player: Identifiable, Codable {
     var profiles: [Sport: SportProfile]
     /// Concrete availability windows selected once during onboarding and editable later.
     var availability: [AvailabilitySlot] = []
+    /// Privacy-preserving map position returned by the nearby RPC (roughly
+    /// neighborhood-level, never the stored exact coordinate).
+    var approximateLatitude: Double? = nil
+    var approximateLongitude: Double? = nil
 
     func profile(_ sport: Sport) -> SportProfile? { profiles[sport] }
     func rating(_ sport: Sport) -> Int { profiles[sport]?.rating ?? EloRating.start }
@@ -357,6 +395,9 @@ struct ChatMessage: Identifiable, Codable {
 
 struct Conversation: Identifiable, Codable {
     var id = UUID()
+    /// Stable server identifier. The local `id` remains stable while an optimistic
+    /// conversation is being created so navigation does not break mid-transition.
+    var backendID: UUID? = nil
     var partnerId: UUID
     var sport: Sport
     var messages: [ChatMessage]
@@ -409,10 +450,14 @@ enum FaceOffState: String, Codable {
 
 struct FaceOff: Identifiable, Codable, Equatable {
     var id = UUID()
+    var backendChallengeID: UUID? = nil
+    var backendMatchID: UUID? = nil
     var sport: Sport
     var opponentId: UUID
     var opponentName: String
     var participantIds: [UUID] = []
+    /// The server-side team assignment for this signed-in player.
+    var myTeam: Int = 1
     var sideALabel: String? = nil
     var sideBLabel: String? = nil
     var date: Date

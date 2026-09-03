@@ -23,7 +23,7 @@ enum DesignSystem {
         static let warning = Scoreline.signal
         static let neonBlue = Scoreline.textSecondary
         static let neonRed = Scoreline.signal
-        static func sport(_ sport: Sport) -> Color { Scoreline.textPrimary }
+        static func sport(_ sport: Sport) -> Color { sport.rallyAccent }
     }
 
     enum Metrics {
@@ -78,7 +78,7 @@ enum Theme {
     static let lime = RallyPalette.sun
     static let badminton = Scoreline.textPrimary
 
-    static func color(for sport: Sport) -> Color { Scoreline.textPrimary }
+    static func color(for sport: Sport) -> Color { sport.rallyAccent }
     static let cardCorner = DesignSystem.Metrics.cardRadius
 
     /// Condensed heavy italic is exclusive to ratings, scores, and statistics.

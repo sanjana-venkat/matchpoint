@@ -23,12 +23,16 @@ struct ProfileDetailView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .top) {
-                RallyPalette.cream.ignoresSafeArea()
-
+            VStack(spacing: 0) {
+                drawerHeader
+                    .padding(.horizontal, RallyLayout.gutter)
+                    .padding(.top, 10)
+                    .padding(.bottom, 12)
+                    .background(RallyPalette.cream)
+                    .zIndex(10)
+                Divider().overlay(RallyPalette.rule)
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 14) {
-                        drawerHeader
                         aboutSection
                         sportRatingsSection
                         mediaRow
@@ -40,7 +44,9 @@ struct ProfileDetailView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 28)
                 }
-
+            }
+            .background(RallyPalette.cream.ignoresSafeArea())
+            .overlay(alignment: .top) {
                 if let notice {
                     Text(notice)
                         .font(RallyType.caption)
@@ -48,7 +54,7 @@ struct ProfileDetailView: View {
                         .padding(.horizontal, 16)
                         .frame(minHeight: 44)
                         .background(RallyPalette.ink, in: Capsule())
-                        .padding(.top, 8)
+                        .padding(.top, 78)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(4)
                 }
@@ -73,7 +79,7 @@ struct ProfileDetailView: View {
                 RallyPhoto(name: player.rallyPhotoName)
                     .frame(width: 58, height: 58)
                     .clipShape(Circle())
-                    .overlay(Circle().stroke(RallyPalette.sun, lineWidth: 2))
+                    .overlay(Circle().stroke(app.activeSport.rallyAccent, lineWidth: 2))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(player.name)
@@ -212,14 +218,12 @@ struct ProfileDetailView: View {
                     .font(.system(size: 15, weight: .semibold))
                 Text(isBlocked ? "Unblock \(player.name)" : "Block \(player.name)")
                     .font(RallyType.body(15, weight: .semibold))
-                Spacer()
             }
             .foregroundStyle(RallyPalette.danger)
-            .padding(.horizontal, 17)
-            .frame(minHeight: 54)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .center)
             .overlay(
-                RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous)
-                    .stroke(RallyPalette.danger.opacity(0.28), lineWidth: 1)
+                Capsule()
+                    .stroke(RallyPalette.danger.opacity(0.42), lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
@@ -252,10 +256,10 @@ struct ProfileDetailView: View {
 
     private var connectButtonTitle: String {
         switch app.friendshipState(with: player.id) {
-        case .friends: return "Open the chat"
+        case .friends: return "Chat"
         case .outgoing: return "Awaiting their reply"
         case .incoming: return "Accept connection"
-        case .none: return conversation == nil ? "Connect" : "Open the chat"
+        case .none: return "Connect"
         }
     }
 
@@ -279,12 +283,8 @@ struct ProfileDetailView: View {
             app.like(player)
             openChat = true
         case .none:
-            if conversation != nil {
-                openChat = true
-            } else {
-                app.sendFriendRequest(to: player.id)
-                app.like(player)
-            }
+            app.sendFriendRequest(to: player.id)
+            app.like(player)
         }
     }
 

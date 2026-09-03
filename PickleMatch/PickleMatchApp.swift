@@ -1,15 +1,22 @@
 import SwiftUI
+import Combine
 
 @main
 struct PickleMatchApp: App {
     @StateObject private var app = AppState()
+    @StateObject private var session = BackendSessionController()
+    @StateObject private var location = LocationService()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(app)
+                .environmentObject(session)
+                .environmentObject(location)
                 .tint(app.themeColor)
                 .preferredColorScheme(.light)
+                .task { session.start() }
+                .onOpenURL { session.handleAuthCallback($0) }
         }
     }
 }
@@ -18,6 +25,8 @@ struct PickleMatchApp: App {
 /// then shows the main tabbed experience.
 struct RootView: View {
     @EnvironmentObject var app: AppState
+    @EnvironmentObject private var session: BackendSessionController
+    @EnvironmentObject private var location: LocationService
     @State private var selectedPrototype = {
         let arguments = ProcessInfo.processInfo.arguments
         return arguments.contains("-demo-established") || arguments.contains("-demo-new")
@@ -25,24 +34,62 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if !selectedPrototype {
-                PrototypeStateChooser { established in
-                    established ? app.loadEstablishedPrototype() : app.loadNewUserPrototype()
-                    withAnimation(.easeInOut(duration: 0.25)) { selectedPrototype = true }
-                }
+            if usesDemoLaunchArguments {
+                appExperience
             } else {
+                switch session.phase {
+                case .starting:
+                    backendLoadingView
+                case .unavailable(let message):
 #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-demo-native-thread"),
-               app.hasCompletedOnboarding,
-               let conversation = app.conversations.first {
-                NativeChatScreen(conversation: conversation)
-            } else if ProcessInfo.processInfo.arguments.contains("-demo-chat"),
-               app.hasCompletedOnboarding,
-               let conversation = app.conversations.first {
-                NavigationStack {
-                    ChatView(conversationId: conversation.id)
+                    prototypeRouter
+#else
+                    backendUnavailableView(message)
+#endif
+                case .signedOut:
+                    BackendAuthView()
+                case .signedIn(let activeSession):
+                    if session.isPasswordRecovery {
+                        PasswordResetView()
+                    } else {
+                        authenticatedExperience(userID: activeSession.user.id)
+                    }
                 }
-            } else if app.hasCompletedOnboarding {
+            }
+        }
+        .animation(.easeInOut, value: app.hasCompletedOnboarding)
+        .onReceive(location.$location.compactMap { $0 }) { value in
+            Task { await app.syncLocationAndRefresh(value) }
+        }
+        .onChange(of: app.hasCompletedOnboarding) { _, completed in
+            if completed { location.requestWhenInUseAccess() }
+        }
+    }
+
+    private var usesDemoLaunchArguments: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("-demo-established")
+            || arguments.contains("-demo-new")
+            || arguments.contains("-demo-main")
+            || arguments.contains("-demo-chat")
+            || arguments.contains("-demo-native-thread")
+            || arguments.contains("-onboarding-step")
+    }
+
+    @ViewBuilder private var prototypeRouter: some View {
+        if !selectedPrototype {
+            PrototypeStateChooser { established in
+                established ? app.loadEstablishedPrototype() : app.loadNewUserPrototype()
+                withAnimation(.easeInOut(duration: 0.25)) { selectedPrototype = true }
+            }
+        } else {
+            appExperience
+        }
+    }
+
+    @ViewBuilder private var appExperience: some View {
+#if DEBUG
+            if app.hasCompletedOnboarding {
                 SashankMainView()
                     .transition(.opacity)
             } else {
@@ -58,9 +105,40 @@ struct RootView: View {
                     .transition(.opacity)
             }
 #endif
+    }
+
+    private func authenticatedExperience(userID: UUID) -> some View {
+        Group {
+            if app.isHydratingBackend || !app.hasHydratedBackend {
+                backendLoadingView
+            } else {
+                appExperience
             }
         }
-        .animation(.easeInOut, value: app.hasCompletedOnboarding)
+        .task(id: userID) {
+            await app.hydrateAuthenticatedUser(id: userID)
+            if app.hasCompletedOnboarding { location.requestWhenInUseAccess() }
+        }
+    }
+
+    private var backendLoadingView: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            ProgressView("Loading Match Point…")
+                .font(Theme.ui(14))
+                .tint(Theme.ink)
+        }
+    }
+
+    private func backendUnavailableView(_ message: String) -> some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            VStack(spacing: 12) {
+                Text("Backend configuration required").font(Theme.heading(22))
+                Text(message).font(Theme.ui(13)).foregroundStyle(Theme.muted)
+            }
+            .padding(28)
+        }
     }
 }
 

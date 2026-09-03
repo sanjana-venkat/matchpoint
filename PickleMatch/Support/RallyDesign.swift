@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct RallyCheckbox: View {
     let title: String
@@ -40,8 +41,10 @@ struct RallyCheckbox: View {
 // MARK: - Rally visual system, adapted to Match Point's domain models
 
 enum RallyPalette {
-    static let cream = Color(hex: "F2E9DC")
-    static let creamDeep = Color(hex: "E6D9C4")
+    /// White is the primary canvas and inverse text color. Warm neutrals are
+    /// reserved for secondary controls so the brand accents and black cards pop.
+    static let cream = Color.white
+    static let creamDeep = Color(hex: "F5F1EA")
     static let ink = Color(hex: "16150F")
     static let inkMuted = ink.opacity(0.55)
     static let creamMuted = cream.opacity(0.64)
@@ -55,6 +58,22 @@ enum RallyPalette {
         startPoint: .top,
         endPoint: .bottom
     )
+}
+
+extension Sport {
+    /// Sport identity colors tuned to stay saturated against Rally's cream
+    /// canvas and legible beside its black typography.
+    var rallyAccent: Color {
+        switch self {
+        case .pickleball: Color(hex: "F4C22C")
+        case .soccer: Color(hex: "2CB9B0")
+        case .volleyball: Color(hex: "CE4F8B")
+        case .badminton: Color(hex: "79CFA6")
+        case .pingPong: Color(hex: "ED7834")
+        case .cricket: Color(hex: "D84A3E")
+        default: RallyPalette.sun
+        }
+    }
 }
 
 enum RallyLayout {
@@ -215,9 +234,13 @@ struct RallyPhoto: View {
         Group {
             switch ImageCatalog.resolve(name) {
             case .bundled(let assetName):
-                Image(assetName)
-                    .resizable()
-                    .aspectRatio(contentMode: contentMode)
+                if let image = UIImage(named: assetName) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: contentMode)
+                } else {
+                    catalogPlaceholder
+                }
             case .remote(let url):
                 AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.22))) { phase in
                     switch phase {
@@ -248,8 +271,31 @@ struct RallyPhoto: View {
     }
 }
 
+/// The premium dimensional equipment artwork supplied for each sport.
+/// Falls back to the native line glyph if an asset is unavailable.
+struct RallySportAssetIcon: View {
+    let sport: Sport
+    var size: CGFloat = 28
+    var fallbackColor: Color = RallyPalette.ink
+
+    var body: some View {
+        Group {
+            if let name = sport.illustrationIconAsset {
+                RallyPhoto(name: name, contentMode: .fit)
+            } else {
+                SportIcon(sport: sport, size: size, color: fallbackColor)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
 extension Player {
     var rallyPhotoName: String {
+        if let portrait = avatar.portraitAssetName {
+            return portrait
+        }
         switch name {
         case let value where value.contains("Maya"): return ImageCatalog.playerKey(slot: 2)
         case let value where value.contains("Diego"): return ImageCatalog.playerKey(slot: 7)
@@ -309,11 +355,11 @@ struct RallyRatingPlate: View {
     let sport: Sport
     let profile: SportProfile?
     var diameter: CGFloat = 82
-    var tone = RallyPalette.sun
+    var tone: Color? = nil
 
     var body: some View {
         ZStack {
-            Circle().fill(tone)
+            Circle().fill(tone ?? sport.rallyAccent)
             VStack(spacing: -2) {
                 Text(value)
                     .font(RallyType.numeral(diameter * (sport.category == .group ? 0.24 : 0.37)))
@@ -363,12 +409,7 @@ struct RallySportSelector: View {
                     let active = sport == selection
                     Button { select(sport) } label: {
                         HStack(spacing: 8) {
-                            SportIcon(
-                                sport: sport,
-                                size: 20,
-                                isSelected: active,
-                                color: active ? RallyPalette.cream : RallyPalette.ink
-                            )
+                            RallySportAssetIcon(sport: sport, size: 24)
                             Text(sport.title)
                                 .font(RallyType.action)
                         }
@@ -536,7 +577,6 @@ struct RallyDateTimeSelector: View {
                             }
                         }
                     }
-                    .scrollClipDisabled()
 
                     Text("Choose a time").rallyEyebrow()
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -557,10 +597,10 @@ struct RallyDateTimeSelector: View {
                             }
                         }
                     }
-                    .scrollClipDisabled()
                 }
                 .padding(18)
                 .background(RallyPalette.creamDeep, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
                 .transition(.scale(scale: 0.97, anchor: .top).combined(with: .opacity))
             }
         }

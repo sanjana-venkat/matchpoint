@@ -10,18 +10,15 @@ struct ChallengeComposerView: View {
     @State private var note = ""
     @State private var proposedDates = [Date().addingTimeInterval(86_400)]
     @State private var venue = ""
-    @State private var showUnratedWarning = false
-    @State private var matchMode: MatchMode = .casual
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             RallyPalette.cream.ignoresSafeArea()
 
-            ScrollViewReader { proxy in
-                ScrollView {
+            ScrollView {
                     VStack(alignment: .leading, spacing: RallyLayout.section) {
                     Text("Send a challenge")
-                        .font(RallyType.hero)
+                        .font(RallyType.cardTitle)
                         .rallyDisplayLeading()
                         .padding(.trailing, 52)
 
@@ -105,15 +102,6 @@ struct ChallengeComposerView: View {
                                 .frame(height: 54)
                                 .background(Theme.surface2, in: Capsule())
 
-                            if app.activeSport.category == .individual {
-                                MinimalChoiceBar(
-                                    options: MatchMode.allCases.map(\.rawValue),
-                                    selection: Binding(
-                                        get: { matchMode.rawValue },
-                                        set: { matchMode = MatchMode(rawValue: $0) ?? .casual }
-                                    )
-                                )
-                            }
                         }
                     }
 
@@ -128,38 +116,19 @@ struct ChallengeComposerView: View {
                     }
 
                     RallyPillButton(title: "Send challenge", icon: "arrow.right", style: .ink, fill: true) {
-                        if matchMode == .rated && isRatingMismatch {
-                            showUnratedWarning = true
-                        } else {
-                            sendChallenge(isRatingExempt: matchMode == .casual)
-                        }
+                        sendChallenge(isRatingExempt: isRatingMismatch)
                     }
                     }
-                    .id("challengeTop")
                     .padding(.horizontal, RallyLayout.gutter)
                     .padding(.top, 28)
                     .padding(.bottom, 48)
                 }
-                .onAppear {
-                    DispatchQueue.main.async {
-                        proxy.scrollTo("challengeTop", anchor: .top)
-                    }
-                }
-            }
 
             CloseIconButton { dismiss() }
                 .padding(.top, 24)
                 .padding(.trailing, RallyLayout.gutter)
         }
         .preferredColorScheme(.light)
-        .sheet(isPresented: $showUnratedWarning) {
-            UnratedInviteConfirmationSheet(name: player.name, sport: app.activeSport) {
-                sendChallenge(isRatingExempt: true)
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Theme.bg)
-        }
     }
 
     private func challengeField<Content: View>(

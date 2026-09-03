@@ -64,6 +64,7 @@ struct FiltersView: View {
                     Button("Apply") {
                         app.filters = draft
                         app.resetDeck()
+                        Task { await app.refreshCommunity() }
                         dismiss()
                     }.fontWeight(.semibold)
                 }

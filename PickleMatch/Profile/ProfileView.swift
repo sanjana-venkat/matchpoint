@@ -336,8 +336,8 @@ struct ProfileView: View {
     }
 
     @ViewBuilder private var addSportButton: some View {
-        let remaining = Sport.allCases.filter { !app.mySports.contains($0) }
-        if !remaining.isEmpty && app.mySports.count < 4 {
+        let remaining = Sport.betaAvailable.filter { !app.mySports.contains($0) }
+        if !remaining.isEmpty && app.mySports.count < Sport.betaAvailable.count {
             PrimaryButton(title: "Add another sport", systemImage: "plus") {
                 showAddSport = true
             }

@@ -1,6 +1,4 @@
 import SwiftUI
-import PhotosUI
-import UIKit
 
 /// Social story → up to four sports → per-sport setup → identity.
 struct OnboardingFlowView: View {
@@ -25,7 +23,7 @@ struct OnboardingFlowView: View {
            let requested = Int(arguments[flag + 1]) {
             _step = State(initialValue: max(0, requested))
             if requested >= 5 {
-                let previewSports: [Sport] = [.pickleball, .badminton, .soccer]
+                let previewSports: [Sport] = [.pickleball, .badminton]
                 _selectedSports = State(initialValue: previewSports)
                 _profiles = State(initialValue: Dictionary(uniqueKeysWithValues: previewSports.map { sport in
                     (sport, SportProfile(sport: sport))
@@ -50,7 +48,7 @@ struct OnboardingFlowView: View {
                 case detailsStep:
                     IdentitySetupStep(me: $me, onFinish: next)
                 case sportsStep:
-                    SportSelectionStep(selected: $selectedSports) {
+                    SportSelectionStep(selected: $selectedSports, avatar: me.avatar) {
                         seedProfiles()
                         next()
                     }
@@ -76,6 +74,10 @@ struct OnboardingFlowView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: step)
         .preferredColorScheme(.light)
+        .onAppear {
+            guard selectedSports.isEmpty, profiles.isEmpty else { return }
+            me = app.me
+        }
     }
 
     private var currentAccent: Color {
@@ -113,7 +115,9 @@ struct OnboardingFlowView: View {
     }
 
     private func finish() {
-        me.profiles = profiles
+        let betaSelection = selectedSports.filter(\.isAvailableInBeta)
+        selectedSports = betaSelection.isEmpty ? [.pickleball] : betaSelection
+        me.profiles = profiles.filter { $0.key.isAvailableInBeta }
         app.me = me
         app.mySports = selectedSports
         withAnimation { step = welcomeStep }
@@ -201,7 +205,7 @@ private struct ConsolidatedSportsSetupStep: View {
     @ViewBuilder private func sportCard(_ sport: Sport) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
-                SportIcon(sport: sport, size: 30)
+                RallySportAssetIcon(sport: sport, size: 30)
                 Text(sport.title).font(Theme.heading(19))
                 Spacer()
                 Text(sport.category == .individual ? "INDIVIDUAL" : "GROUP")
@@ -223,9 +227,8 @@ private struct ConsolidatedSportsSetupStep: View {
                 )
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Everyone starts at 80, and the rating moves in small, honest steps after verified rated matches.")
-                    Text("Only verified rated matches change your starting rating.")
-                    Text("Games with unrated opponents remain unrated for everyone.")
+                    Text("Everyone starts at 80, and verified rated matches move it in small steps.")
+                    Text("Games with unrated opponents stay unrated for everyone.")
                 }
                 .font(Theme.ui(11))
                 .foregroundStyle(Theme.muted)
@@ -260,7 +263,7 @@ private struct PeerRatingInfoSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 12) {
-                    SportIcon(sport: sport, size: 38)
+                    RallySportAssetIcon(sport: sport, size: 38)
                     Text("\(sport.title) peer ratings").font(Theme.heading(25))
                 }
                 Text("After a verified \(sport.title) game, teammates and opponents can score your sport-specific skills from one to five. Match Point shows each category's average and verified reviewer count; a single review never creates a public numerical player rating.")
@@ -295,7 +298,7 @@ private struct FlowHeader: View {
                 .tracking(1.4)
                 .foregroundStyle(Theme.muted)
             HStack(spacing: 10) {
-                if let sport { SportIcon(sport: sport, size: 34) }
+                if let sport { RallySportAssetIcon(sport: sport, size: 34) }
                 Text(title)
                     .font(Theme.heading(31))
                     .tracking(-0.8)
@@ -338,17 +341,17 @@ private struct WelcomeStory: View {
     private let pages = [
         WelcomePage(
             title: "Discover local\nsports partners.",
-            body: "Match Point connects you with players a few streets away who play the sports you play. Browse the neighbourhood, meet people on court, and build a regular group you look forward to seeing every week.",
+            body: "Find nearby people who play the sports you love. Build a local group and get on court together.",
             kicker: "Find your people"
         ),
         WelcomePage(
             title: "Play people\nat your level.",
-            body: "Individual sports use the MP Rating, a single number that moves in small, honest steps. Beat someone stronger and you climb faster. Group sports skip the number entirely and rely on peer skill evaluations from the people who played beside you.",
+            body: "MP Rating helps match individual players fairly. Group sports use feedback from verified teammates and opponents.",
             kicker: "Fair matchmaking"
         ),
         WelcomePage(
             title: "Challenge, play,\nlog the score.",
-            body: "In individual sports you send a challenge, play the match, and upload the score for your opponent to verify. In group sports you keep a shared calendar of fixtures and rate each other afterwards, because a squad needs a schedule far more than it needs a ladder.",
+            body: "Challenge someone, play, and submit the score for verification. Group sports keep fixtures together on a shared calendar.",
             kicker: "Stay organised"
         )
     ]
@@ -473,23 +476,46 @@ private struct MultiSportSocialHero: View {
 
 private struct SportSelectionStep: View {
     @Binding var selected: [Sport]
+    let avatar: Avatar
     let onContinue: () -> Void
+    @State private var previewSport: Sport = .pickleball
 
     var body: some View {
         VStack(spacing: 0) {
             FlowHeader(
                 kicker: "Your sports",
-                title: "Pick up to four sports.",
-                detail: "Every sport has its own mode, match history, and player community. You can change your active sport at any time."
+                title: "Choose your sports.",
+                detail: "Pickleball and Badminton are ready for the beta. More sports are coming soon."
             )
             .padding(.horizontal, 20)
             .padding(.top, 12)
 
+            RallyPhoto(name: avatar.portraitAssetName ?? "avatar.01", contentMode: .fit)
+                .frame(height: 174)
+                .background(RallyPalette.creamDeep.opacity(0.48), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(RallyPalette.ink.opacity(0.18), lineWidth: 1.4)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    Text(previewSport.title.uppercased())
+                        .font(RallyType.eyebrow)
+                        .tracking(1.4)
+                        .foregroundStyle(RallyPalette.ink)
+                        .padding(.horizontal, 12)
+                        .frame(height: 30)
+                        .background(previewSport.rallyAccent, in: Capsule())
+                        .padding(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
             HStack {
-                Text("\(selected.count) of 4 sports selected")
+                Text("\(selected.count) of 2 sports selected")
                     .font(Theme.ui(12, weight: .bold))
                 Spacer()
-                if selected.count == 4 {
+                if selected.count == Sport.betaAvailable.count {
                     Text("LIMIT REACHED")
                         .font(Theme.ui(9, weight: .bold))
                         .tracking(1)
@@ -515,30 +541,97 @@ private struct SportSelectionStep: View {
 
     private func category(_ category: SportCategory) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(category.rawValue.uppercased())
+            Text(category == .individual ? "INDIVIDUAL AND DUAL SPORTS" : "GROUP SPORTS")
                 .font(Theme.ui(10, weight: .bold))
                 .tracking(1.2)
                 .foregroundStyle(Theme.muted)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(Sport.allCases.filter { $0.category == category }) { sport in
+            VStack(spacing: 10) {
+                ForEach(sports(in: category)) { sport in
                     sportCard(sport)
                 }
             }
         }
     }
 
+    private func sports(in category: SportCategory) -> [Sport] {
+        switch category {
+        case .individual:
+            [.pickleball, .badminton, .pingPong]
+        case .group:
+            [.cricket, .soccer, .volleyball]
+        }
+    }
+
     private func sportCard(_ sport: Sport) -> some View {
         let isSelected = selected.contains(sport)
-        let disabled = selected.count >= 4 && !isSelected
-        return SelectableCard(title: sport.title, sport: sport,
-                              isSelected: isSelected, isDisabled: disabled) {
-            if isSelected {
-                selected.removeAll { $0 == sport }
-            } else if selected.count < 4 {
-                selected.append(sport)
+        let comingSoon = !sport.isAvailableInBeta
+        let disabled = comingSoon || (selected.count >= Sport.betaAvailable.count && !isSelected)
+        let detail = comingSoon ? "Coming soon" : "MP Rated"
+
+        return Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                previewSport = sport
+                if isSelected {
+                    selected.removeAll { $0 == sport }
+                } else if selected.count < Sport.betaAvailable.count {
+                    selected.append(sport)
+                }
+            }
+        } label: {
+            HStack(spacing: 14) {
+                RallySportAssetIcon(sport: sport, size: 34)
+                .frame(width: 50, height: 50)
+                .background(
+                    isSelected ? RallyPalette.sun.opacity(0.32) : RallyPalette.creamDeep,
+                    in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(sport.title)
+                        .font(RallyType.action)
+                        .foregroundStyle(RallyPalette.ink)
+                    Text(detail)
+                        .font(RallyType.caption)
+                        .foregroundStyle(RallyPalette.inkMuted)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 8)
+
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? RallyPalette.ink : .clear)
+                    Circle()
+                        .stroke(
+                            isSelected ? RallyPalette.ink : RallyPalette.ink.opacity(0.32),
+                            lineWidth: 1.8
+                        )
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .black))
+                            .foregroundStyle(RallyPalette.sun)
+                    }
+                }
+                .frame(width: 26, height: 26)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
+            .background(
+                isSelected ? RallyPalette.creamDeep : RallyPalette.cream,
+                in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(
+                        isSelected ? RallyPalette.ink.opacity(0.62) : RallyPalette.ink.opacity(0.20),
+                        lineWidth: isSelected ? 1.7 : 1.25
+                    )
             }
         }
+        .buttonStyle(RallyPressStyle())
+        .disabled(disabled)
+        .opacity(disabled ? 0.48 : 1)
     }
 }
 
@@ -649,9 +742,6 @@ private struct IdentitySetupStep: View {
     @Binding var me: Player
     let onFinish: () -> Void
     @FocusState private var focus: Field?
-    @State private var photoItem: PhotosPickerItem?
-    @State private var selectedPhotoData: Data?
-    @State private var showCameraNote = false
     private enum Field { case name, username, age }
 
     private var canFinish: Bool {
@@ -668,52 +758,25 @@ private struct IdentitySetupStep: View {
                     title: "Create your profile."
                 )
 
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle().fill(Theme.surface2)
-                        if let selectedPhotoData,
-                           let image = UIImage(data: selectedPhotoData) {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFill()
-                                .clipShape(Circle())
-                        } else {
-                            VStack(spacing: 7) {
-                                Image(systemName: "camera")
-                                    .font(.system(size: 28, weight: .medium))
-                                Text("Add photo")
-                                    .font(RallyType.caption)
-                            }
-                            .foregroundStyle(Theme.muted)
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(spacing: 14) {
+                        AvatarView(avatar: me.avatar, size: 92)
+                            .overlay(Circle().stroke(RallyPalette.sun, lineWidth: 4))
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Choose your player")
+                                .font(RallyType.cardTitle)
+                            Text("This character changes equipment when you switch sports.")
+                                .font(RallyType.caption)
+                                .foregroundStyle(Theme.muted)
                         }
-                    }
-                    .frame(width: 126, height: 126)
-                    .overlay(Circle().stroke(Theme.ink, lineWidth: 2))
-                    .overlay(alignment: .bottomTrailing) {
-                        Circle()
-                            .fill(RallyPalette.sun)
-                            .frame(width: 34, height: 34)
-                            .overlay(
-                                Image(systemName: "plus")
-                                    .font(.system(size: 14, weight: .black))
-                                    .foregroundStyle(RallyPalette.ink)
-                            )
-                            .overlay(Circle().stroke(Theme.bg, lineWidth: 3))
                     }
 
-                    HStack(spacing: 10) {
-                        PhotosPicker(selection: $photoItem, matching: .images) {
-                            photoActionLabel("Photo library", icon: "photo.on.rectangle", primary: true)
-                        }
-                        .buttonStyle(.plain)
-
-                        Button { showCameraNote = true } label: {
-                            photoActionLabel("Camera", icon: "camera", primary: false)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    AvatarChoiceStrip(selection: $me.avatar, size: 68)
                 }
+                .padding(16)
                 .frame(maxWidth: .infinity)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
 
                 VStack(spacing: 12) {
                     TextField("Full name", text: $me.name)
@@ -753,58 +816,7 @@ private struct IdentitySetupStep: View {
             .padding(20)
         }
         .onAppear { focus = .name }
-        .onChange(of: photoItem) { _, item in
-            Task { selectedPhotoData = try? await item?.loadTransferable(type: Data.self) }
-        }
-        .overlay {
-            if showCameraNote {
-                ZStack {
-                    RallyPalette.ink.opacity(0.32).ignoresSafeArea()
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Text("Take a profile photo")
-                                .font(RallyType.cardTitle)
-                            Spacer()
-                            Button { showCameraNote = false } label: {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 14, weight: .black))
-                                    .frame(width: 42, height: 42)
-                                    .background(RallyPalette.creamDeep, in: Circle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        Text("Camera capture opens on a physical device. In the simulator, choose an image from the photo library to preview the finished profile.")
-                            .font(RallyType.body(15))
-                            .foregroundStyle(Theme.muted)
-                            .lineSpacing(3)
-                        Button { showCameraNote = false } label: {
-                            Text("Got it")
-                                .font(RallyType.action)
-                                .foregroundStyle(RallyPalette.cream)
-                                .frame(maxWidth: .infinity, minHeight: 54)
-                                .background(RallyPalette.ink, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(22)
-                    .background(RallyPalette.cream, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
-                    .padding(24)
-                }
-                .transition(.opacity)
-            }
-        }
     }
-
-    private func photoActionLabel(_ title: String, icon: String, primary: Bool) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 15, weight: .bold))
-            Text(title).font(RallyType.action)
-        }
-        .foregroundStyle(primary ? RallyPalette.cream : RallyPalette.ink)
-        .frame(maxWidth: .infinity, minHeight: 56)
-        .background(primary ? RallyPalette.ink : RallyPalette.sun, in: Capsule())
-    }
-
 }
 
 private struct WelcomeLoadingView: View {

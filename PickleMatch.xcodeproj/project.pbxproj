@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A2000020 /* PickleMatchWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2000008 /* PickleMatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1000001 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B1000003 /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +37,7 @@
 
 /* Begin PBXFileReference section */
 		A2000008 /* PickleMatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PickleMatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1000004 /* Backend.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Backend.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -48,6 +50,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1000001 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,10 +67,19 @@
 		A1000001 = {
 			isa = PBXGroup;
 			children = (
+				B1000005 /* Config */,
 				A1000002 /* PickleMatch */,
 				A2000002 /* PickleMatchWidget */,
 				A1000009 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		B1000005 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B1000004 /* Backend.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		A1000009 /* Products */ = {
@@ -99,6 +111,9 @@
 				A1000002 /* PickleMatch */,
 			);
 			name = PickleMatch;
+			packageProductDependencies = (
+				B1000003 /* Supabase */,
+			);
 			productName = PickleMatch;
 			productType = "com.apple.product-type.application";
 		};
@@ -150,6 +165,9 @@
 			);
 			mainGroup = A1000001;
 			productRefGroup = A1000009 /* Products */;
+			packageReferences = (
+				B1000002 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -321,13 +339,15 @@
 		};
 		A1000015 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B1000004 /* Backend.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "PickleMatch-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Match Point";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -350,13 +370,15 @@
 		};
 		A1000016 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = B1000004 /* Backend.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "PickleMatch-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Match Point";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -456,6 +478,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B1000002 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.54.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B1000003 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B1000002 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1000000 /* Project object */;
 }

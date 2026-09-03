@@ -1,9 +1,11 @@
 import SwiftUI
 import MapKit
+import Combine
 
 /// Zoomable live-player map with gender/rating chips and profile bottom sheets.
 struct PlayersMapView: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var location: LocationService
 
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -19,7 +21,9 @@ struct PlayersMapView: View {
     @State private var openFilter: MapFilterPanel?
     @State private var challengePlayer: Player?
 
-    private let center = CLLocationCoordinate2D(latitude: 30.2672, longitude: -97.7431)
+    private var center: CLLocationCoordinate2D {
+        location.location?.coordinate ?? CLLocationCoordinate2D(latitude: 30.2672, longitude: -97.7431)
+    }
 
     private var visiblePlayers: [Player] {
         app.players.filter { player in
@@ -43,6 +47,7 @@ struct PlayersMapView: View {
         NavigationStack {
             ZStack {
                 Map(position: $cameraPosition, interactionModes: .all) {
+                    if location.location != nil {
                     Annotation("You", coordinate: center, anchor: .center) {
                         ZStack {
                             Circle().fill(Theme.signal.opacity(0.22)).frame(width: 38, height: 38)
@@ -52,6 +57,7 @@ struct PlayersMapView: View {
                                 .font(.system(size: 9, weight: .black))
                                 .foregroundStyle(Theme.bg)
                         }
+                    }
                     }
 
                     ForEach(visiblePlayers) { player in
@@ -96,6 +102,9 @@ struct PlayersMapView: View {
                     HStack {
                         Spacer()
                         Button {
+                            if location.location == nil {
+                                location.requestWhenInUseAccess()
+                            }
                             withAnimation {
                                 cameraPosition = .region(
                                     MKCoordinateRegion(
@@ -123,6 +132,12 @@ struct PlayersMapView: View {
                 ToolbarItem(placement: .topBarLeading) { SportModeToggle() }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .onReceive(location.$location.compactMap { $0 }) { value in
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: value.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.20, longitudeDelta: 0.20)
+                ))
+            }
             .toolbarBackground(Theme.bg.opacity(0.92), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -278,6 +293,10 @@ struct PlayersMapView: View {
     }
 
     private func coordinate(for player: Player) -> CLLocationCoordinate2D {
+        if let latitude = player.approximateLatitude,
+           let longitude = player.approximateLongitude {
+            return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        }
         let offsets: [(Double, Double)] = [
             (0.015, -0.020), (-0.025, 0.012), (0.032, 0.026),
             (-0.040, -0.030), (0.055, -0.014), (-0.012, 0.054),

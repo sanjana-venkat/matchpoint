@@ -83,7 +83,7 @@ struct ConversationsView: View {
             .sheet(item: $selectedProfile) { player in
                 ProfileDetailView(player: player)
                     .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                    .presentationDragIndicator(.hidden)
                     .presentationBackground(Theme.bg)
             }
         }
@@ -320,7 +320,7 @@ struct GroupChatComposer: View {
                                     Spacer()
                                     ZStack {
                                         Circle()
-                                            .fill(selected.contains(player.id) ? RallyPalette.sun : .clear)
+                                            .fill(selected.contains(player.id) ? app.activeSport.rallyAccent : .clear)
                                         Circle()
                                             .stroke(RallyPalette.ink.opacity(selected.contains(player.id) ? 1 : 0.45), lineWidth: 2)
                                         if selected.contains(player.id) {

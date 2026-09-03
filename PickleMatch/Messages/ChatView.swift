@@ -2,7 +2,28 @@ import SwiftUI
 
 /// One-to-one chat with attachments, challenge/face-off actions, and
 /// block/report — the "dating app amenities."
+/// Compatibility route for older navigation entry points. All conversations use
+/// the same current chat experience so styling and behavior cannot drift.
 struct ChatView: View {
+    let conversationId: UUID
+    @EnvironmentObject private var app: AppState
+
+    var body: some View {
+        if let conversation = app.conversations.first(where: { $0.id == conversationId }) {
+            NativeChatScreen(conversation: conversation)
+        } else {
+            ContentUnavailableView(
+                "Conversation unavailable",
+                systemImage: "bubble.left.and.exclamationmark.bubble.right",
+                description: Text("This conversation may have been removed.")
+            )
+        }
+    }
+}
+
+/// Retained temporarily while any legacy-only supporting flows are migrated.
+/// No app navigation entry point presents this implementation.
+private struct LegacyChatView: View {
     let conversationId: UUID
     @EnvironmentObject var app: AppState
     @Environment(\.dismiss) private var dismiss
@@ -36,6 +57,7 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            chatHeader
             if convo?.isMessageRequest == true { messageRequestBanner }
             if let fo = activeChallenge { faceOffBanner(fo) }
             if showChatMenu { chatMenuPanel }
@@ -93,42 +115,12 @@ struct ChatView: View {
         }
         .background(Theme.bg)
         .foregroundStyle(Theme.ink)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
-        .toolbarBackground(Theme.bg, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button { dismiss() } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.ink)
-                        .frame(width: 38, height: 38)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-            }
-            ToolbarItem(placement: .principal) {
-                Button { showPlayerProfile = true } label: {
-                    HStack(spacing: 8) {
-                        if let player { AvatarView(avatar: player.avatar, size: 32) }
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(chatTitle).font(Theme.ui(13, weight: .bold))
-                            Text("View profile").font(Theme.ui(9)).foregroundStyle(Theme.muted)
-                        }
-                    }
-                    .foregroundStyle(Theme.ink)
-                }
-                .buttonStyle(.plain)
-            }
-            ToolbarItem(placement: .topBarTrailing) { menu }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showPlayerProfile) {
             if let player {
                 ProfileDetailView(player: player)
                     .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                    .presentationDragIndicator(.hidden)
                     .presentationBackground(Theme.bg)
             }
         }
@@ -189,6 +181,54 @@ struct ChatView: View {
             }
 #endif
         }
+    }
+
+    private var chatHeader: some View {
+        ZStack {
+            HStack {
+                headerIconButton("chevron.left", label: "Back") { dismiss() }
+                Spacer()
+                menu
+            }
+
+            Button { showPlayerProfile = true } label: {
+                HStack(spacing: 10) {
+                    if let player {
+                        RallyPlayerAvatar(player: player, size: 38, ring: app.themeColor, ringWidth: 2.5)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(chatTitle)
+                            .font(Theme.ui(14, weight: .bold))
+                            .lineLimit(1)
+                        Text("View profile")
+                            .font(Theme.ui(10, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.62))
+                    }
+                }
+                .foregroundStyle(Color.white)
+            }
+            .buttonStyle(RallyPressStyle())
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background {
+            Rectangle().fill(Theme.ink)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(app.themeColor).frame(height: 4)
+        }
+    }
+
+    private func headerIconButton(_ icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color.white)
+                .frame(width: 44, height: 44)
+                .background(Color.white.opacity(0.10), in: Circle())
+        }
+        .buttonStyle(RallyPressStyle())
+        .accessibilityLabel(label)
     }
 
     private var messageRequestBanner: some View {
@@ -289,13 +329,20 @@ struct ChatView: View {
     }
 
     private func faceOffBanner(_ fo: FaceOff) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: "flag.checkered")
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                RallySportAssetIcon(sport: fo.sport, size: 34)
                 VStack(alignment: .leading) {
-                    Text("Face-off · \(fo.date.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.subheadline.weight(.semibold))
-                    Text(fo.venue).font(.caption).foregroundStyle(.secondary)
+                    Text("MATCH IN PROGRESS")
+                        .font(Theme.ui(10, weight: .bold))
+                        .tracking(1.2)
+                        .foregroundStyle(app.themeColor)
+                    Text(fo.date.formatted(date: .abbreviated, time: .shortened))
+                        .font(Theme.heading(20))
+                        .foregroundStyle(Color.white)
+                    Text(fo.venue)
+                        .font(Theme.ui(12))
+                        .foregroundStyle(Color.white.opacity(0.62))
                 }
                 Spacer()
             }
@@ -304,70 +351,70 @@ struct ChatView: View {
                 if fo.proposedByMe {
                     Label("Waiting for confirmation", systemImage: "paperplane.fill")
                         .font(Theme.ui(11, weight: .bold))
-                        .foregroundStyle(Theme.ink.opacity(0.82))
+                        .foregroundStyle(Color.white.opacity(0.78))
                 } else {
                     HStack {
-                        CompactActionButton(title: "Decline") { app.declineChallenge(fo.id) }
-                        CompactActionButton(title: "Accept challenge", primary: true) { app.acceptChallenge(fo.id) }
+                        chatMatchButton("Decline", primary: false) { app.declineChallenge(fo.id) }
+                        chatMatchButton("Accept challenge", primary: true) { app.acceptChallenge(fo.id) }
                     }
                 }
             case .confirmed:
                 if fo.date <= .now {
-                    Button {
-                        showReport = fo; showReportSheet = true
-                    } label: {
-                        Label("Report result", systemImage: "checkmark.circle").frame(maxWidth: .infinity)
+                    chatMatchButton("Report result", primary: true) {
+                        showReport = fo
+                        showReportSheet = true
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(app.themeColor)
-                    .foregroundStyle(Theme.bg)
-                    .controlSize(.small)
                 } else {
                     Label(
                         "Scheduled for \(fo.date.formatted(date: .abbreviated, time: .shortened))",
                         systemImage: "clock.badge.checkmark"
                     )
                     .font(Theme.ui(11, weight: .bold))
-                    .foregroundStyle(Theme.ink.opacity(0.82))
+                    .foregroundStyle(Color.white.opacity(0.78))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             case .awaitingResult:
                 if fo.reportedWinnerByThem != nil && fo.reportedWinnerByMe == nil {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Label("Verify the submitted scores", systemImage: "checkmark.shield.fill")
-                            .font(Theme.ui(11, weight: .bold))
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Verify the submitted scores")
+                            .font(Theme.ui(13, weight: .bold))
+                            .foregroundStyle(Color.white)
                         HStack {
-                            CompactActionButton(title: "Dispute") {
+                            chatMatchButton("Dispute", primary: false) {
                                 app.verifyIncomingResult(faceOffId: fo.id, agrees: false)
                             }
-                            CompactActionButton(title: "Scores are correct", primary: true) {
+                            chatMatchButton("Scores are correct", primary: true) {
                                 app.verifyIncomingResult(faceOffId: fo.id, agrees: true)
                             }
                         }
                     }
                 } else {
                     Label("Waiting for \(fo.opponentName) to confirm the result…", systemImage: "hourglass")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(Color.white.opacity(0.65))
                 }
             case .resultDisputed:
                 Label("Results didn't match. Re-report to settle.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(.caption).foregroundStyle(app.themeColor)
             default: EmptyView()
             }
+        }
+        .padding(18)
+        .background(Theme.ink)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+    }
 
-            HStack(spacing: 20) {
-                Button("+ Add another challenge") { showChallenge = true }
-                Button("✏️ Edit challenges") { showEditChallenges = true }
-            }
-            .font(Theme.ui(10, weight: .bold))
-            .foregroundStyle(Theme.ink)
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private func chatMatchButton(_ title: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(Theme.ui(12, weight: .bold))
+                .foregroundStyle(primary ? Theme.ink : Color.white)
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(primary ? app.themeColor : Color.white.opacity(0.10), in: Capsule())
+                .overlay(Capsule().stroke(primary ? Color.clear : Color.white.opacity(0.32), lineWidth: 1.2))
         }
-        .padding()
-        .background(app.themeColor.opacity(0.24))
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.ink).frame(height: 2.5)
-        }
+        .buttonStyle(RallyPressStyle())
     }
 
     // MARK: Menu
@@ -376,11 +423,12 @@ struct ChatView: View {
         Button { withAnimation(.easeOut(duration: 0.15)) { showChatMenu.toggle() } } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Theme.ink)
-                .frame(width: 38, height: 38)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(Color.white)
+                .frame(width: 44, height: 44)
+                .background(Color.white.opacity(0.10), in: Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RallyPressStyle())
+        .accessibilityLabel("Conversation actions")
     }
 
     private var chatMenuPanel: some View {

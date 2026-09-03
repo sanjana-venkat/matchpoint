@@ -48,6 +48,7 @@ enum ImageCatalog {
 
     static func resolve(_ key: String) -> Resolution {
         if UIImage(named: key) != nil { return .bundled(key) }
+        if UIImage(named: key + ".png") != nil { return .bundled(key + ".png") }
         if let source = sources[key], let url = URL(string: source) { return .remote(url) }
         return .missing
     }

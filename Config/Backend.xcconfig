@@ -1,0 +1,5 @@
+// Safe, committed defaults. Local values are loaded from the ignored file.
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+
+#include? "Secrets.xcconfig"

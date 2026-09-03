@@ -10,6 +10,12 @@ DerivedData/
 
 # SwiftPM
 .swiftpm/
+.build/
+
+# Local backend configuration
+Config/Secrets.xcconfig
+supabase/.branches/
+supabase/.temp/
 
 # Temporary files
 *.swp

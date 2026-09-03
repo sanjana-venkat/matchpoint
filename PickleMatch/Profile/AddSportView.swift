@@ -8,7 +8,7 @@ struct AddSportView: View {
     @State private var chosen: Sport?
     @State private var profile = SportProfile(sport: .badminton)
 
-    private var remaining: [Sport] { Sport.allCases.filter { !app.mySports.contains($0) } }
+    private var remaining: [Sport] { Sport.betaAvailable.filter { !app.mySports.contains($0) } }
 
     var body: some View {
         NavigationStack {
@@ -16,7 +16,7 @@ struct AddSportView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     StepHeader(
                         title: chosen == nil ? "Pick a sport to add" : "Set up \(chosen!.title)",
-                        subtitle: chosen == nil ? "You can have up to four sport profiles." : setupSubtitle
+                        subtitle: chosen == nil ? "Pickleball and Badminton are available in this beta." : setupSubtitle
                     )
 
                     if chosen == nil { sportPicker } else { setup }

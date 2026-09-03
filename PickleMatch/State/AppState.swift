@@ -1,11 +1,13 @@
 import SwiftUI
 import Combine
+import CoreLocation
 
-/// Single source of truth for the whole prototype. All data is in-memory mock
-/// data — no backend. Swapping `activeSport` re-skins and re-filters the app.
+/// UI-facing state. Prototype data remains available for design previews while
+/// authenticated profile data is loaded and persisted through the repository.
 @MainActor
 final class AppState: ObservableObject {
     private let availabilityStorageKey = "picklematch.profile.availability.v1"
+    private let avatarStorageKey = "picklematch.profile.avatar.v1"
 
     // MARK: Onboarding / me
     @Published var hasCompletedOnboarding = false
@@ -14,7 +16,15 @@ final class AppState: ObservableObject {
     @Published var mySports: [Sport] = []
     /// Which sport "mode" the app is currently showing.
     @Published var activeSport: Sport = .pickleball {
-        didSet { objectWillChange.send() }
+        didSet {
+            objectWillChange.send()
+            guard hydratedUserID != nil else { return }
+            Task {
+                async let players: Void = refreshCommunity()
+                async let communities: Void = refreshNearbyCommunities()
+                _ = await (players, communities)
+            }
+        }
     }
 
     // MARK: Community
@@ -29,11 +39,32 @@ final class AppState: ObservableObject {
     @Published var friendCountOverride: Int = 0
     @Published var hasUnsavedDraft = false
     @Published var notificationsMarkedRead = false
+    @Published private(set) var isHydratingBackend = false
+    @Published private(set) var hasHydratedBackend = false
+    @Published private(set) var backendSyncError: String?
+    @Published private(set) var remoteUnreadNotificationCount = 0
+    @Published private(set) var isRefreshingCommunity = false
+    @Published private(set) var nearbyCommunities: [NearbyCommunity] = []
+    @Published private(set) var isRefreshingCommunities = false
 
     // MARK: Discover filters (per session)
     @Published var filters = DiscoverFilters()
 
-    init() {
+    private let profileRepository: ProfileRepository?
+    private let productionRepository: ProductionRepository?
+    private let courtDiscoveryService: CourtDiscoveryService
+    private var hydratedUserID: UUID?
+    private var connectionIDsByPeer: [UUID: UUID] = [:]
+    private var latestLocation: CLLocation?
+
+    init(
+        profileRepository: ProfileRepository? = BackendDependencies.shared.profiles,
+        productionRepository: ProductionRepository? = BackendDependencies.shared.production,
+        courtDiscoveryService: CourtDiscoveryService = CourtDiscoveryService()
+    ) {
+        self.profileRepository = profileRepository
+        self.productionRepository = productionRepository
+        self.courtDiscoveryService = courtDiscoveryService
         players = MockData.players()
         conversations = MockData.conversations(players: players)
         faceOffs = MockData.faceOffs(players: players)
@@ -53,6 +84,10 @@ final class AppState: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: availabilityStorageKey),
            let saved = try? JSONDecoder().decode([AvailabilitySlot].self, from: data) {
             me.availability = saved
+        }
+        if let data = UserDefaults.standard.data(forKey: avatarStorageKey),
+           let saved = try? JSONDecoder().decode(Avatar.self, from: data) {
+            me.avatar = saved
         }
 
 #if DEBUG
@@ -97,8 +132,57 @@ final class AppState: ObservableObject {
             mySports = [.pickleball, .badminton, .soccer]
             activeSport = .pickleball
             hasCompletedOnboarding = true
+            faceOffs.append(contentsOf: MockData.pendingVerifications(players: players))
+            nearbyCommunities = MockData.nearbyCommunities()
         }
 #endif
+    }
+
+    func hydrateAuthenticatedUser(id: UUID) async {
+        guard hydratedUserID != id else { return }
+        guard let profileRepository else {
+            backendSyncError = "The profile service is not configured."
+            hasHydratedBackend = true
+            return
+        }
+        isHydratingBackend = true
+        backendSyncError = nil
+        defer {
+            hydratedUserID = id
+            isHydratingBackend = false
+            hasHydratedBackend = true
+        }
+
+        do {
+            let snapshot = try await profileRepository.fetchProfile(userID: id)
+            me = snapshot.player
+            let betaSports = snapshot.sports.filter(\.isAvailableInBeta)
+            mySports = betaSports.isEmpty ? [.pickleball] : betaSports
+            activeSport = mySports.first ?? .pickleball
+            hasCompletedOnboarding = snapshot.onboardingCompleted
+
+            // Never mix the real signed-in account with prototype community data.
+            players = []
+            conversations = []
+            faceOffs = []
+            groupFixtures = []
+            matchHistory = []
+            nearbyCommunities = []
+            friendIds = []
+            incomingFriendRequestIds = []
+            outgoingFriendRequestIds = []
+            hydratedUserID = id
+            async let community: Void = refreshCommunity()
+            async let inbox: Void = refreshInbox()
+            async let matchbook: Void = refreshMatchbook()
+            _ = await (community, inbox, matchbook)
+        } catch {
+            // The auth trigger creates an intentionally incomplete profile row.
+            // Preserve the authenticated identity while onboarding fills it in.
+            loadNewUserPrototype()
+            me.id = id
+            backendSyncError = error.localizedDescription
+        }
     }
 
     var myProfile: SportProfile? { me.profiles[activeSport] }
@@ -106,6 +190,7 @@ final class AppState: ObservableObject {
     var hasMultipleSports: Bool { mySports.count > 1 }
     var displayedFriendCount: Int { max(friendIds.count, friendCountOverride) }
     var notificationCount: Int {
+        if hydratedUserID != nil { return remoteUnreadNotificationCount }
         guard !notificationsMarkedRead else { return 0 }
         let verificationCount = faceOffs.filter {
             $0.sport == activeSport && $0.state == .awaitingResult && $0.reportedWinnerByThem != nil
@@ -117,6 +202,205 @@ final class AppState: ObservableObject {
             incomingFriendRequestIds.contains($0.id) && $0.profile(activeSport) != nil
         }.count
         return requestCount + verificationCount + challengeCount
+    }
+
+    func syncLocationAndRefresh(_ location: CLLocation) async {
+        guard let productionRepository, hydratedUserID != nil else { return }
+        do {
+            latestLocation = location
+            try await productionRepository.updateLocation(location)
+            async let playerRefresh: Void = refreshCommunity()
+            async let communityRefresh: Void = refreshNearbyCommunities(discoverWith: location)
+            _ = await (playerRefresh, communityRefresh)
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    func disableLocationDiscovery() async {
+        guard let productionRepository else { return }
+        do {
+            try await productionRepository.clearLocation()
+            players = []
+            nearbyCommunities = []
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    func refreshNearbyCommunities(discoverWith location: CLLocation? = nil) async {
+        guard let productionRepository, hydratedUserID != nil, activeSport.isAvailableInBeta else {
+            nearbyCommunities = []
+            return
+        }
+        isRefreshingCommunities = true
+        defer { isRefreshingCommunities = false }
+        do {
+            if let location = location ?? latestLocation {
+                let discovered = try await courtDiscoveryService.discover(
+                    sport: activeSport,
+                    near: location,
+                    radiusMiles: filters.maxDistance
+                )
+                try await productionRepository.syncDiscoveredCourts(discovered)
+            }
+            nearbyCommunities = try await productionRepository.fetchNearbyCommunities(
+                sport: activeSport,
+                radiusMiles: filters.maxDistance
+            )
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    func communityDetail(clubID: UUID) async -> CommunityDetailSnapshot? {
+        do {
+            return try await productionRepository?.fetchCommunityDetail(clubID: clubID)
+        } catch {
+            backendSyncError = error.localizedDescription
+            return nil
+        }
+    }
+
+    func setClubMembership(clubID: UUID, join: Bool) async -> Bool {
+        guard let productionRepository else { return false }
+        do {
+            try await productionRepository.setClubMembership(clubID: clubID, join: join)
+            await refreshNearbyCommunities()
+            return true
+        } catch {
+            backendSyncError = error.localizedDescription
+            return false
+        }
+    }
+
+    func createClub(at courtID: UUID, name: String, description: String) async -> UUID? {
+        guard let productionRepository else { return nil }
+        do {
+            let id = try await productionRepository.createClub(
+                sport: activeSport, courtID: courtID, name: name, description: description
+            )
+            await refreshNearbyCommunities()
+            return id
+        } catch {
+            backendSyncError = error.localizedDescription
+            return nil
+        }
+    }
+
+    func createCommunityGroup(clubID: UUID, name: String, description: String) async -> UUID? {
+        guard let productionRepository else { return nil }
+        do {
+            return try await productionRepository.createCommunityGroup(
+                clubID: clubID, name: name, description: description
+            )
+        } catch {
+            backendSyncError = error.localizedDescription
+            return nil
+        }
+    }
+
+    func setCommunityGroupMembership(groupID: UUID, join: Bool) async -> Bool {
+        guard let productionRepository else { return false }
+        do {
+            try await productionRepository.setCommunityGroupMembership(groupID: groupID, join: join)
+            return true
+        } catch {
+            backendSyncError = error.localizedDescription
+            return false
+        }
+    }
+
+    func permanentlyDeleteAccount() async -> Bool {
+        guard let productionRepository else {
+            backendSyncError = "The account service is unavailable."
+            return false
+        }
+        do {
+            try await productionRepository.deleteAccount()
+            return true
+        } catch {
+            backendSyncError = error.localizedDescription
+            return false
+        }
+    }
+
+    func refreshCommunity() async {
+        guard let productionRepository, hydratedUserID != nil, !isRefreshingCommunity else { return }
+        isRefreshingCommunity = true
+        defer { isRefreshingCommunity = false }
+        do {
+            let cachedPlayers = Dictionary(uniqueKeysWithValues: players.map { ($0.id, $0) })
+            let snapshot = try await productionRepository.fetchCommunity(
+                sport: activeSport,
+                radiusMiles: filters.maxDistance
+            )
+            players = snapshot.players
+            // Keep chat participants who may be outside the current discovery radius.
+            for conversation in conversations {
+                for participantID in participantIds(for: conversation)
+                    where !players.contains(where: { $0.id == participantID }) {
+                    if let cached = cachedPlayers[participantID] { players.append(cached) }
+                }
+            }
+            friendIds = snapshot.friendIDs
+            incomingFriendRequestIds = snapshot.incomingRequestIDs
+            outgoingFriendRequestIds = snapshot.outgoingRequestIDs
+            connectionIDsByPeer = snapshot.connectionIDsByPeer
+            remoteUnreadNotificationCount = snapshot.unreadNotificationCount
+            backendSyncError = nil
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    func refreshInbox() async {
+        guard let productionRepository, hydratedUserID != nil else { return }
+        do {
+            let snapshot = try await productionRepository.fetchInbox()
+            conversations = snapshot.conversations
+            for participant in snapshot.participants {
+                if let index = players.firstIndex(where: { $0.id == participant.id }) {
+                    for (sport, profile) in participant.profiles where players[index].profiles[sport] == nil {
+                        players[index].profiles[sport] = profile
+                    }
+                } else {
+                    players.append(participant)
+                }
+            }
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    func markAllNotificationsRead() {
+        notificationsMarkedRead = true
+        remoteUnreadNotificationCount = 0
+        guard let productionRepository, hydratedUserID != nil else { return }
+        Task {
+            do { try await productionRepository.markNotificationsRead(ids: nil) }
+            catch { backendSyncError = error.localizedDescription }
+        }
+    }
+
+    func refreshMatchbook() async {
+        guard let productionRepository, hydratedUserID != nil else { return }
+        do {
+            let snapshot = try await productionRepository.fetchMatchbook()
+            faceOffs = snapshot.faceOffs
+            matchHistory = snapshot.history
+            for participant in snapshot.participants {
+                if let index = players.firstIndex(where: { $0.id == participant.id }) {
+                    for (sport, profile) in participant.profiles where players[index].profiles[sport] == nil {
+                        players[index].profiles[sport] = profile
+                    }
+                } else {
+                    players.append(participant)
+                }
+            }
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
     }
 
     // MARK: - Prototype states
@@ -134,6 +418,7 @@ final class AppState: ObservableObject {
         outgoingFriendRequestIds = []
         friendCountOverride = 0
         notificationsMarkedRead = false
+        nearbyCommunities = MockData.nearbyCommunities()
         hasCompletedOnboarding = false
     }
 
@@ -209,24 +494,7 @@ final class AppState: ObservableObject {
         // player to verify, plus both incoming and outgoing challenge proposals.
         // Keep these as real FaceOff records so every home action updates the
         // same data shown in Chats, Matches, and the calendar.
-        for (index, opponent) in players.prefix(3).enumerated() {
-            faceOffs.append(
-                FaceOff(
-                    sport: .pickleball,
-                    opponentId: opponent.id,
-                    opponentName: opponent.name,
-                    date: Date().addingTimeInterval(TimeInterval(-(index + 2) * 86_400)),
-                    venue: ["Zilker Courts", "Riverside Courts", "Austin Pickle Ranch"][index],
-                    wager: "No wager",
-                    state: .awaitingResult,
-                    proposedByMe: false,
-                    reportedWinnerByThem: index == 1 ? .theyWon : .iWon,
-                    gameScores: index == 1
-                        ? [GameScore(myScore: 11, opponentScore: 7), GameScore(myScore: 11, opponentScore: 9)]
-                        : [GameScore(myScore: 8, opponentScore: 11), GameScore(myScore: 11, opponentScore: 9), GameScore(myScore: 6, opponentScore: 11)]
-                )
-            )
-        }
+        faceOffs.append(contentsOf: MockData.pendingVerifications(players: players))
         if players.count > 5 {
             let first = Calendar.current.date(byAdding: .day, value: 2, to: .now) ?? .now
             let second = Calendar.current.date(byAdding: .day, value: 3, to: .now) ?? .now
@@ -299,6 +567,9 @@ final class AppState: ObservableObject {
     // MARK: - Onboarding completion
 
     func completeOnboarding() {
+        let betaSports = mySports.filter(\.isAvailableInBeta)
+        mySports = betaSports.isEmpty ? [.pickleball] : betaSports
+        me.profiles = me.profiles.filter { $0.key.isAvailableInBeta }
         // Seed my rating history with the starting point.
         for sport in mySports {
             if me.profiles[sport] == nil {
@@ -315,11 +586,49 @@ final class AppState: ObservableObject {
         activeSport = mySports.first ?? .pickleball
         hasCompletedOnboarding = true
         persistAvailability()
+        persistAvatar()
+        persistProfileToBackend()
+    }
+
+    private func persistProfileToBackend() {
+        guard let profileRepository else { return }
+        let player = me
+        let sports = mySports
+        Task {
+            do {
+                try await profileRepository.saveOnboarding(player: player, sports: sports)
+                backendSyncError = nil
+            } catch {
+                backendSyncError = error.localizedDescription
+            }
+        }
+    }
+
+    func persistProfileChanges() async -> Bool {
+        guard let profileRepository else {
+            backendSyncError = "The profile service is unavailable."
+            return false
+        }
+        do {
+            let sports = mySports.filter(\.isAvailableInBeta)
+            try await profileRepository.saveOnboarding(
+                player: me,
+                sports: sports.isEmpty ? [.pickleball] : sports
+            )
+            backendSyncError = nil
+            return true
+        } catch {
+            backendSyncError = error.localizedDescription
+            return false
+        }
     }
 
     func updateMyAvailability(_ slots: [AvailabilitySlot]) {
         me.availability = slots.sorted { $0.startDate < $1.startDate }
         persistAvailability()
+        if hydratedUserID != nil {
+            Task { _ = await persistProfileChanges() }
+        }
     }
 
     private func persistAvailability() {
@@ -327,9 +636,16 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(data, forKey: availabilityStorageKey)
     }
 
+    private func persistAvatar() {
+        guard let data = try? JSONEncoder().encode(me.avatar) else { return }
+        UserDefaults.standard.set(data, forKey: avatarStorageKey)
+    }
+
     /// Add a second (or later) sport after initial onboarding.
     func addSport(_ sport: Sport, profile: SportProfile) {
-        guard !mySports.contains(sport), mySports.count < 4 else { return }
+        guard sport.isAvailableInBeta,
+              !mySports.contains(sport),
+              mySports.count < Sport.betaAvailable.count else { return }
         mySports.append(sport)
         var p = profile
         p.ratingHistory = [RatingPoint(date: Date(), rating: p.rating)]
@@ -358,6 +674,7 @@ final class AppState: ObservableObject {
         if conversation(with: player.id) == nil {
             let convo = Conversation(partnerId: player.id, sport: activeSport, messages: [])
             conversations.insert(convo, at: 0)
+            createRemoteConversationIfNeeded(localConversationID: convo.id)
         }
     }
 
@@ -381,6 +698,16 @@ final class AppState: ObservableObject {
     func sendFriendRequest(to playerId: UUID) {
         guard !friendIds.contains(playerId) else { return }
         outgoingFriendRequestIds.insert(playerId)
+        guard let productionRepository, hydratedUserID != nil else { return }
+        Task {
+            do {
+                try await productionRepository.sendConnectionRequest(to: playerId)
+                await refreshCommunity()
+            } catch {
+                outgoingFriendRequestIds.remove(playerId)
+                backendSyncError = error.localizedDescription
+            }
+        }
     }
 
     func acceptFriendRequest(from playerId: UUID) {
@@ -390,22 +717,37 @@ final class AppState: ObservableObject {
         if let index = conversations.firstIndex(where: { $0.partnerId == playerId }) {
             conversations[index].isMessageRequest = false
         }
+        respondToRemoteConnection(from: playerId, accept: true)
     }
 
     func declineFriendRequest(from playerId: UUID) {
         incomingFriendRequestIds.remove(playerId)
+        respondToRemoteConnection(from: playerId, accept: false)
     }
 
     func acceptMessageRequest(_ conversationId: UUID) {
         guard let index = conversations.firstIndex(where: { $0.id == conversationId }) else { return }
         conversations[index].isMessageRequest = false
         acceptFriendRequest(from: conversations[index].partnerId)
+        if let productionRepository, let backendID = conversations[index].backendID, hydratedUserID != nil {
+            Task {
+                do { try await productionRepository.acceptConversation(id: backendID) }
+                catch { backendSyncError = error.localizedDescription }
+            }
+        }
     }
 
     func deleteMessageRequest(_ conversationId: UUID) {
         guard let index = conversations.firstIndex(where: { $0.id == conversationId }) else { return }
+        let backendID = conversations[index].backendID
         incomingFriendRequestIds.remove(conversations[index].partnerId)
         conversations.remove(at: index)
+        if let productionRepository, let backendID, hydratedUserID != nil {
+            Task {
+                do { try await productionRepository.leaveConversation(id: backendID) }
+                catch { backendSyncError = error.localizedDescription }
+            }
+        }
     }
 
     func createGroupConversation(name: String, participantIds: [UUID]) -> Conversation? {
@@ -419,6 +761,7 @@ final class AppState: ObservableObject {
             groupName: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Court crew" : name
         )
         conversations.insert(conversation, at: 0)
+        createRemoteConversationIfNeeded(localConversationID: conversation.id)
         return conversation
     }
 
@@ -478,6 +821,11 @@ final class AppState: ObservableObject {
         ensureConversation(with: playerId)
         guard let idx = conversationIndex(playerId) else { return }
         conversations[idx].messages.append(ChatMessage(fromMe: true, kind: kind))
+        if productionRepository != nil, hydratedUserID != nil {
+            let localID = conversations[idx].id
+            Task { await sendRemote(kind, localConversationID: localID) }
+            return
+        }
         // Simulate a reply so the prototype feels alive.
         simulateReply(to: playerId, for: kind)
     }
@@ -498,6 +846,56 @@ final class AppState: ObservableObject {
 
     private func conversationIndex(_ playerId: UUID) -> Int? {
         conversations.firstIndex { $0.partnerId == playerId && $0.sport == activeSport }
+    }
+
+    private func createRemoteConversationIfNeeded(localConversationID: UUID) {
+        guard productionRepository != nil, hydratedUserID != nil else { return }
+        Task { await ensureRemoteConversation(localConversationID: localConversationID) }
+    }
+
+    private func ensureRemoteConversation(localConversationID: UUID) async -> UUID? {
+        guard let productionRepository,
+              let index = conversations.firstIndex(where: { $0.id == localConversationID }) else { return nil }
+        if let backendID = conversations[index].backendID { return backendID }
+        let memberIDs = participantIds(for: conversations[index])
+        do {
+            let backendID = try await productionRepository.createConversation(
+                sport: conversations[index].sport,
+                memberIDs: memberIDs,
+                title: conversations[index].groupName
+            )
+            if let current = conversations.firstIndex(where: { $0.id == localConversationID }) {
+                conversations[current].backendID = backendID
+            }
+            return backendID
+        } catch {
+            backendSyncError = error.localizedDescription
+            return nil
+        }
+    }
+
+    private func sendRemote(_ kind: MessageKind, localConversationID: UUID) async {
+        guard let productionRepository,
+              let backendID = await ensureRemoteConversation(localConversationID: localConversationID) else { return }
+        do {
+            _ = try await productionRepository.sendMessage(kind, conversationID: backendID)
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
+    private func respondToRemoteConnection(from playerID: UUID, accept: Bool) {
+        guard let productionRepository,
+              hydratedUserID != nil,
+              let connectionID = connectionIDsByPeer[playerID] else { return }
+        Task {
+            do {
+                try await productionRepository.respondToConnection(id: connectionID, accept: accept)
+                await refreshCommunity()
+            } catch {
+                backendSyncError = error.localizedDescription
+            }
+        }
     }
 
     private func simulateReply(to playerId: UUID, for kind: MessageKind) {
@@ -521,6 +919,20 @@ final class AppState: ObservableObject {
         ensureConversation(with: playerId)
         guard let idx = conversationIndex(playerId) else { return }
         conversations[idx].isBlocked.toggle()
+        guard let productionRepository, hydratedUserID != nil else { return }
+        let blocked = conversations[idx].isBlocked
+        let localConversationID = conversations[idx].id
+        Task {
+            do {
+                try await productionRepository.setBlocked(blocked, playerID: playerId)
+                await refreshCommunity()
+            } catch {
+                if let current = conversations.firstIndex(where: { $0.id == localConversationID }) {
+                    conversations[current].isBlocked.toggle()
+                }
+                backendSyncError = error.localizedDescription
+            }
+        }
     }
 
     func proposeWager(_ value: String, in conversationId: UUID) {
@@ -559,6 +971,56 @@ final class AppState: ObservableObject {
 
     // MARK: - Face-offs
 
+    private func createRemoteChallengeIfNeeded(localFaceOffID: UUID, note: String) {
+        guard let productionRepository, hydratedUserID != nil,
+              let index = faceOffs.firstIndex(where: { $0.id == localFaceOffID }),
+              faceOffs[index].backendChallengeID == nil else { return }
+        let faceOff = faceOffs[index]
+        let opponentIDs = faceOff.participantIds.isEmpty ? [faceOff.opponentId] : faceOff.participantIds
+        let format = opponentIDs.count >= 3 ? "doubles" : "singles"
+        let participants = opponentIDs.enumerated().map { offset, id in
+            BackendChallengeParticipant(userID: id, team: offset == 0 && opponentIDs.count >= 3 ? 1 : 2)
+        }
+        Task {
+            do {
+                let backendID = try await productionRepository.createChallenge(BackendChallengeDraft(
+                    sport: faceOff.sport,
+                    format: format,
+                    participants: participants,
+                    proposedStarts: faceOff.proposedDates.isEmpty ? [faceOff.date] : faceOff.proposedDates,
+                    duration: 3_600,
+                    note: note,
+                    venue: faceOff.venue,
+                    conversationID: conversations.first(where: { $0.partnerId == faceOff.opponentId && $0.sport == faceOff.sport })?.backendID,
+                    ratingExempt: faceOff.isRatingExempt
+                ))
+                if let current = faceOffs.firstIndex(where: { $0.id == localFaceOffID }) {
+                    faceOffs[current].backendChallengeID = backendID
+                }
+            } catch {
+                backendSyncError = error.localizedDescription
+            }
+        }
+    }
+
+    private func respondToRemoteChallenge(localFaceOffID: UUID, accept: Bool) {
+        guard let productionRepository, hydratedUserID != nil,
+              let index = faceOffs.firstIndex(where: { $0.id == localFaceOffID }),
+              let backendID = faceOffs[index].backendChallengeID else { return }
+        Task {
+            do {
+                let matchID = try await productionRepository.respondToChallenge(
+                    id: backendID, accept: accept, selectedSlotID: nil
+                )
+                if let current = faceOffs.firstIndex(where: { $0.id == localFaceOffID }) {
+                    faceOffs[current].backendMatchID = matchID
+                }
+            } catch {
+                backendSyncError = error.localizedDescription
+            }
+        }
+    }
+
     func isRatingExempt(opponentIds: [UUID], sport: Sport) -> Bool {
         guard sport.category == .individual,
               me.profile(sport)?.usesElo == true else { return false }
@@ -593,6 +1055,7 @@ final class AppState: ObservableObject {
             isRatingExempt: isRatingExempt
         )
         faceOffs.append(challenge)
+        createRemoteChallengeIfNeeded(localFaceOffID: challenge.id, note: note)
         send(.challenge(Challenge(wager: "No wager proposed", note: note)), to: player.id)
         let formattedOptions = options
             .map { $0.formatted(date: .abbreviated, time: .shortened) }
@@ -626,6 +1089,30 @@ final class AppState: ObservableObject {
             source: .unscheduled
         )
         faceOffs.append(faceOff)
+        if let productionRepository, hydratedUserID != nil {
+            let localID = faceOff.id
+            let backendParticipants = teammateIds.map {
+                BackendChallengeParticipant(userID: $0, team: 1)
+            } + opponentIds.map {
+                BackendChallengeParticipant(userID: $0, team: 2)
+            }
+            Task {
+                do {
+                    let matchID = try await productionRepository.createUploadedMatch(BackendUploadedMatchDraft(
+                        sport: sport,
+                        format: participantIds.count >= 3 ? "doubles" : "singles",
+                        participants: backendParticipants,
+                        startsAt: faceOff.date,
+                        ratingExempt: isRatingExempt
+                    ))
+                    if let current = faceOffs.firstIndex(where: { $0.id == localID }) {
+                        faceOffs[current].backendMatchID = matchID
+                    }
+                } catch {
+                    backendSyncError = error.localizedDescription
+                }
+            }
+        }
         return faceOff
     }
 
@@ -642,6 +1129,7 @@ final class AppState: ObservableObject {
     func acceptChallenge(_ faceOffId: UUID) {
         guard let index = faceOffs.firstIndex(where: { $0.id == faceOffId }) else { return }
         faceOffs[index].state = .confirmed
+        respondToRemoteChallenge(localFaceOffID: faceOffId, accept: true)
         send(.faceOff(faceOffs[index]), to: faceOffs[index].opponentId)
         send(.system("Challenge accepted and added to both schedules."), to: faceOffs[index].opponentId)
     }
@@ -649,12 +1137,14 @@ final class AppState: ObservableObject {
     func declineChallenge(_ faceOffId: UUID) {
         guard let index = faceOffs.firstIndex(where: { $0.id == faceOffId }) else { return }
         faceOffs[index].state = .cancelled
+        respondToRemoteChallenge(localFaceOffID: faceOffId, accept: false)
         send(.system("Challenge declined."), to: faceOffs[index].opponentId)
     }
 
     func cancelChallenge(_ faceOffId: UUID) {
         guard let index = faceOffs.firstIndex(where: { $0.id == faceOffId }) else { return }
         faceOffs[index].state = .cancelled
+        respondToRemoteChallenge(localFaceOffID: faceOffId, accept: false)
         send(.system("Challenge cancelled."), to: faceOffs[index].opponentId)
     }
 
@@ -745,6 +1235,34 @@ final class AppState: ObservableObject {
         guard let i = faceOffs.firstIndex(where: { $0.id == faceOffId }) else { return }
         faceOffs[i].reportedWinnerByMe = outcome
         faceOffs[i].state = .awaitingResult
+        if let productionRepository, hydratedUserID != nil {
+            let myTeam = faceOffs[i].myTeam
+            let winningTeam = outcome == .iWon ? myTeam : (myTeam == 1 ? 2 : 1)
+            let serverScores = myTeam == 1 ? faceOffs[i].gameScores : faceOffs[i].gameScores.map {
+                GameScore(id: $0.id, myScore: $0.opponentScore, opponentScore: $0.myScore)
+            }
+            Task {
+                do {
+                    var matchID = faceOffs.first(where: { $0.id == faceOffId })?.backendMatchID
+                    for _ in 0..<30 where matchID == nil {
+                        try await Task.sleep(for: .milliseconds(100))
+                        matchID = faceOffs.first(where: { $0.id == faceOffId })?.backendMatchID
+                    }
+                    guard let matchID else {
+                        backendSyncError = "The match is still being created. Please submit the score again."
+                        return
+                    }
+                    try await productionRepository.reportMatchResult(
+                        matchID: matchID,
+                        winningTeam: winningTeam,
+                        scores: serverScores
+                    )
+                    await refreshMatchbook()
+                } catch {
+                    backendSyncError = error.localizedDescription
+                }
+            }
+        }
         send(.system("Scores submitted. Waiting for opponent verification before stats or Elo update."),
              to: faceOffs[i].opponentId)
         // A backend delivery creates the opponent's verification request. Statistics
@@ -797,10 +1315,37 @@ final class AppState: ObservableObject {
         let oppRating = opponent.rating(fo.sport)
         let before = myProf.rating
         let usesElo = myProf.usesElo && !fo.isRatingExempt
-        let after = usesElo ? EloRating.newRating(player: before, opponent: oppRating, didWin: iWon) : before
+        var after = before
+
+        let opponentSnapshot = opponent.profile(fo.sport)
+        let updates = RatingEngine.individualMatch(
+            playerA: CompetitiveRating(
+                rating: Double(before),
+                uncertainty: myProf.uncertainty,
+                gamesPlayed: myProf.gamesPlayed,
+                wins: myProf.wins,
+                losses: myProf.losses,
+                draws: myProf.draws
+            ),
+            playerB: CompetitiveRating(
+                rating: Double(oppRating),
+                uncertainty: opponentSnapshot?.uncertainty ?? RatingConfiguration.matchPoint.initialUncertainty,
+                gamesPlayed: opponentSnapshot?.gamesPlayed ?? 0,
+                wins: opponentSnapshot?.wins ?? 0,
+                losses: opponentSnapshot?.losses ?? 0,
+                draws: opponentSnapshot?.draws ?? 0
+            ),
+            resultForA: iWon ? .win : .loss
+        )
 
         if usesElo {
+            after = RatingEngine.publicRating(updates.playerA.after.rating)
             myProf.rating = after
+            myProf.uncertainty = updates.playerA.after.uncertainty
+            myProf.gamesPlayed = updates.playerA.after.gamesPlayed
+            myProf.wins = updates.playerA.after.wins
+            myProf.losses = updates.playerA.after.losses
+            myProf.draws = updates.playerA.after.draws
             myProf.ratingHistory.append(RatingPoint(date: fo.date, rating: after))
         }
         me.profiles[fo.sport] = myProf
@@ -809,11 +1354,12 @@ final class AppState: ObservableObject {
            var opponentProfile = players[playerIndex].profiles[fo.sport],
            opponentProfile.usesElo,
            !fo.isRatingExempt {
-            opponentProfile.rating = EloRating.newRating(
-                player: opponentProfile.rating,
-                opponent: before,
-                didWin: !iWon
-            )
+            opponentProfile.rating = RatingEngine.publicRating(updates.playerB.after.rating)
+            opponentProfile.uncertainty = updates.playerB.after.uncertainty
+            opponentProfile.gamesPlayed = updates.playerB.after.gamesPlayed
+            opponentProfile.wins = updates.playerB.after.wins
+            opponentProfile.losses = updates.playerB.after.losses
+            opponentProfile.draws = updates.playerB.after.draws
             opponentProfile.ratingHistory.append(RatingPoint(date: fo.date, rating: opponentProfile.rating))
             players[playerIndex].profiles[fo.sport] = opponentProfile
         }
@@ -854,9 +1400,28 @@ final class AppState: ObservableObject {
         faceOffs[index].reportedWinnerByMe = myGames > opponentGames ? .iWon : .theyWon
         faceOffs[index].state = .awaitingResult
         let opponentRating = opponent.rating(faceOffs[index].sport)
-        let after = myProfile?.usesElo == true && !faceOffs[index].isRatingExempt
-            ? EloRating.newRating(player: before, opponent: opponentRating, didWin: myGames > opponentGames)
-            : before
+        let after: Int
+        if let profile = myProfile, profile.usesElo, !faceOffs[index].isRatingExempt {
+            let expected = RatingEngine.expectedScore(
+                ratingA: Double(before),
+                ratingB: Double(opponentRating)
+            )
+            let update = RatingEngine.update(
+                player: CompetitiveRating(
+                    rating: Double(before),
+                    uncertainty: profile.uncertainty,
+                    gamesPlayed: profile.gamesPlayed,
+                    wins: profile.wins,
+                    losses: profile.losses,
+                    draws: profile.draws
+                ),
+                expectedScore: expected,
+                result: myGames > opponentGames ? .win : .loss
+            )
+            after = RatingEngine.publicRating(update.after.rating)
+        } else {
+            after = before
+        }
         return LiveMatchSummary(
             didWin: myGames > opponentGames,
             opponentName: opponent.name,
@@ -895,7 +1460,12 @@ final class AppState: ObservableObject {
         .sorted { $0.date > $1.date }
     }
 
-    func submitPeerRatings(playerId: UUID, sport: Sport, values: [String: Int]) {
+    func submitPeerRatings(
+        playerId: UUID,
+        sport: Sport,
+        values: [String: Int],
+        writtenReview: String = ""
+    ) {
         guard sport.category == .group,
               let playerIndex = players.firstIndex(where: { $0.id == playerId }),
               var profile = players[playerIndex].profiles[sport] else { return }
@@ -910,6 +1480,13 @@ final class AppState: ObservableObject {
             } else {
                 profile.peerSkillRatings.append(PeerSkillRating(category: category, average: Double(value), count: 1))
             }
+        }
+        let review = writtenReview.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !review.isEmpty {
+            profile.peerWrittenReviews.insert(
+                PeerWrittenReview(reviewerName: me.name, text: String(review.prefix(500))),
+                at: 0
+            )
         }
         players[playerIndex].profiles[sport] = profile
     }

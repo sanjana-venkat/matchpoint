@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Match Point brand
 
@@ -73,15 +74,22 @@ struct SportIcon: View {
     var color = Theme.ink
 
     var body: some View {
-        SportGlyphShape(sport: sport)
-            .stroke(
-                color,
-                style: StrokeStyle(
-                    lineWidth: isSelected ? 2 : 1.6,
-                    lineCap: .round,
-                    lineJoin: .round
-                )
-            )
+        Group {
+            if let asset = sport.illustrationIconAsset {
+                RallyPhoto(name: asset, contentMode: .fit)
+            } else {
+                SportGlyphShape(sport: sport)
+                    .stroke(
+                        color,
+                        style: StrokeStyle(
+                            lineWidth: isSelected ? 2 : 1.6,
+                            lineCap: .round,
+                            lineJoin: .round
+                        )
+                    )
+                    .padding(size * 0.08)
+            }
+        }
             .frame(width: size, height: size)
             .accessibilityHidden(true)
     }
@@ -146,7 +154,13 @@ struct SelectableCard: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                if let sport { SportIcon(sport: sport, size: 30, isSelected: isSelected, color: isSelected ? Theme.bg : Theme.ink) }
+                if let sport {
+                    RallySportAssetIcon(
+                        sport: sport,
+                        size: 32,
+                        fallbackColor: isSelected ? Theme.bg : Theme.ink
+                    )
+                }
                 Text(title).font(Theme.ui(13, weight: .bold)).lineLimit(1)
                 Spacer(minLength: 0)
                 Image(systemName: isSelected ? "checkmark" : "circle")
@@ -204,6 +218,8 @@ struct MinimalChoiceBar: View {
 struct VerticalChoiceList: View {
     let options: [String]
     @Binding var selection: String
+    var selectedFill: Color = Theme.surface2
+    var selectedForeground: Color = Theme.ink
 
     var body: some View {
         VStack(spacing: 8) {
@@ -215,13 +231,13 @@ struct VerticalChoiceList: View {
                     Text(option)
                         .font(Theme.ui(14, weight: .semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    .foregroundStyle(isSelected ? Theme.bg : Theme.ink)
+                    .foregroundStyle(isSelected ? selectedForeground : Theme.ink)
                     .padding(.horizontal, 15)
                     .frame(height: 48)
-                    .background(isSelected ? Theme.ink : Theme.surface,
+                    .background(isSelected ? selectedFill : Theme.surface,
                                 in: RoundedRectangle(cornerRadius: DesignSystem.Metrics.controlRadius))
                     .overlay(RoundedRectangle(cornerRadius: DesignSystem.Metrics.controlRadius)
-                        .stroke(isSelected ? Theme.ink : Theme.hairline, lineWidth: 1))
+                        .stroke(isSelected ? Theme.ink.opacity(0.34) : Theme.hairline, lineWidth: isSelected ? 1.5 : 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -292,8 +308,9 @@ struct AvatarView: View {
 
     var body: some View {
         ZStack {
-            if let imageName = avatar.imageName {
-                Image(imageName)
+            if let imageName = avatar.portraitAssetName,
+               let image = UIImage(named: imageName) ?? UIImage(named: imageName + ".png") {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size, height: size)
@@ -339,11 +356,12 @@ struct CompactActionButton: View {
 struct AvatarChoiceStrip: View {
     @Binding var selection: Avatar
     var size: CGFloat = 66
+    var choices: [Avatar] = Avatar.illustratedChoices
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(Avatar.all) { avatar in
+                ForEach(choices) { avatar in
                     Button {
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
                             selection = avatar
