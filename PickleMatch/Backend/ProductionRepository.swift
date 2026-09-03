@@ -14,6 +14,7 @@ struct BackendCommunitySnapshot: Sendable {
 struct BackendInboxSnapshot: Sendable {
     var conversations: [Conversation]
     var participants: [Player]
+    var unreadConversationIDs: Set<UUID>
 }
 
 struct BackendMatchbookSnapshot: Sendable {
@@ -42,6 +43,7 @@ protocol ProductionRepository: Sendable {
     func acceptConversation(id: UUID) async throws
     func leaveConversation(id: UUID) async throws
     func sendMessage(_ kind: MessageKind, conversationID: UUID) async throws -> UUID
+    func markConversationsRead(ids: [UUID]) async throws
     func createChallenge(_ draft: BackendChallengeDraft) async throws -> UUID
     func createUploadedMatch(_ draft: BackendUploadedMatchDraft) async throws -> UUID
     func respondToChallenge(id: UUID, accept: Bool, selectedSlotID: UUID?) async throws -> UUID?
@@ -114,6 +116,20 @@ private struct InboxRow: Decodable, Sendable {
         case participantUsernames = "participant_usernames"
         case participantAvatarIDs = "participant_avatar_ids"
     }
+}
+
+private struct ConversationReadRow: Decodable, Sendable {
+    let conversationID: UUID
+    let lastReadAt: Date?
+    enum CodingKeys: String, CodingKey {
+        case conversationID = "conversation_id"
+        case lastReadAt = "last_read_at"
+    }
+}
+
+private struct ConversationReadWrite: Encodable, Sendable {
+    let lastReadAt: Date
+    enum CodingKeys: String, CodingKey { case lastReadAt = "last_read_at" }
 }
 
 private struct MatchbookScoreRow: Decodable, Sendable {
@@ -639,7 +655,15 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
     func fetchInbox() async throws -> BackendInboxSnapshot {
         let userID = try await client.auth.session.user.id
         let rows: [InboxRow] = try await client.rpc("my_inbox", params: EmptyParameters()).execute().value
+        let readRows: [ConversationReadRow] = try await client
+            .from("conversation_members")
+            .select("conversation_id,last_read_at")
+            .eq("user_id", value: userID)
+            .execute()
+            .value
+        let lastReadByConversation = Dictionary(uniqueKeysWithValues: readRows.map { ($0.conversationID, $0.lastReadAt) })
         var participantsByID: [UUID: Player] = [:]
+        var unreadConversationIDs: Set<UUID> = []
         let conversations = rows.compactMap { row -> Conversation? in
             guard let anchorID = row.participantIDs.first else { return nil }
             for index in row.participantIDs.indices {
@@ -663,6 +687,12 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
                     date: message.createdAt
                 )
             }
+            let lastRead = lastReadByConversation[row.conversationID].flatMap { $0 } ?? .distantPast
+            if !row.isRequest,
+               let newestIncoming = row.messages.last(where: { $0.senderID != userID }),
+               newestIncoming.createdAt > lastRead {
+                unreadConversationIDs.insert(row.conversationID)
+            }
             return Conversation(
                 id: row.conversationID,
                 backendID: row.conversationID,
@@ -674,7 +704,11 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
                 isMessageRequest: row.isRequest
             )
         }
-        return BackendInboxSnapshot(conversations: conversations, participants: Array(participantsByID.values))
+        return BackendInboxSnapshot(
+            conversations: conversations,
+            participants: Array(participantsByID.values),
+            unreadConversationIDs: unreadConversationIDs
+        )
     }
 
     func fetchMatchbook() async throws -> BackendMatchbookSnapshot {
@@ -791,6 +825,17 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
             body: content.body,
             payload: content.payload
         )).execute().value
+    }
+
+    func markConversationsRead(ids: [UUID]) async throws {
+        guard !ids.isEmpty else { return }
+        let userID = try await client.auth.session.user.id
+        try await client
+            .from("conversation_members")
+            .update(ConversationReadWrite(lastReadAt: .now))
+            .eq("user_id", value: userID)
+            .in("conversation_id", values: ids)
+            .execute()
     }
 
     func createChallenge(_ draft: BackendChallengeDraft) async throws -> UUID {

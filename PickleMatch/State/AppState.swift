@@ -43,6 +43,7 @@ final class AppState: ObservableObject {
     @Published private(set) var hasHydratedBackend = false
     @Published private(set) var backendSyncError: String?
     @Published private(set) var remoteUnreadNotificationCount = 0
+    @Published private(set) var unreadConversationIDs: Set<UUID> = []
     @Published private(set) var isRefreshingCommunity = false
     @Published private(set) var nearbyCommunities: [NearbyCommunity] = []
     @Published private(set) var isRefreshingCommunities = false
@@ -360,6 +361,7 @@ final class AppState: ObservableObject {
         do {
             let snapshot = try await productionRepository.fetchInbox()
             conversations = snapshot.conversations
+            unreadConversationIDs = snapshot.unreadConversationIDs
             for participant in snapshot.participants {
                 if let index = players.firstIndex(where: { $0.id == participant.id }) {
                     for (sport, profile) in participant.profiles where players[index].profiles[sport] == nil {
@@ -380,6 +382,18 @@ final class AppState: ObservableObject {
         guard let productionRepository, hydratedUserID != nil else { return }
         Task {
             do { try await productionRepository.markNotificationsRead(ids: nil) }
+            catch { backendSyncError = error.localizedDescription }
+        }
+    }
+
+    func markAllConversationsRead() {
+        let ids = hasHydratedBackend
+            ? Array(unreadConversationIDs)
+            : conversations.filter { !$0.isMessageRequest }.compactMap { $0.lastMessage?.fromMe == false ? $0.id : nil }
+        unreadConversationIDs.removeAll()
+        guard let productionRepository, hydratedUserID != nil, !ids.isEmpty else { return }
+        Task {
+            do { try await productionRepository.markConversationsRead(ids: ids) }
             catch { backendSyncError = error.localizedDescription }
         }
     }

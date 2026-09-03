@@ -217,12 +217,16 @@ struct SashankMainView: View {
     }
 
     private var hasUnreadChatMessages: Bool {
-        !incomingMessageIDs.subtracting(seenIncomingMessageIDs).isEmpty
+        if app.hasHydratedBackend { return !app.unreadConversationIDs.isEmpty }
+        return !incomingMessageIDs.subtracting(seenIncomingMessageIDs).isEmpty
     }
 
     private func openGlobalPage(_ page: GlobalPage) {
         showSports = false
-        if page == .chats { seenIncomingMessageIDs.formUnion(incomingMessageIDs) }
+        if page == .chats {
+            seenIncomingMessageIDs.formUnion(incomingMessageIDs)
+            app.markAllConversationsRead()
+        }
         withAnimation(.easeOut(duration: 0.28)) { globalPage = page }
     }
 
