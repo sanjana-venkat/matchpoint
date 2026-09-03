@@ -2,7 +2,13 @@ import SwiftUI
 
 /// Feature-parity version of Sashank's player drawer, painted in Rally's visual language.
 struct ProfileDetailView: View {
+    enum PresentationMode {
+        case standard
+        case connectionRequest
+    }
+
     let player: Player
+    var presentationMode: PresentationMode = .standard
     @EnvironmentObject private var app: AppState
     @Environment(\.dismiss) private var dismiss
 
@@ -36,8 +42,12 @@ struct ProfileDetailView: View {
                         aboutSection
                         sportRatingsSection
                         mutualConnectionsSection
-                        connectButton
-                        secondaryConnectionButton
+                        if presentationMode == .connectionRequest {
+                            requestActions
+                        } else {
+                            connectButton
+                            secondaryConnectionButton
+                        }
                     }
                     .padding(.horizontal, RallyLayout.gutter)
                     .padding(.top, 12)
@@ -186,6 +196,29 @@ struct ProfileDetailView: View {
             .foregroundStyle(connectButtonForeground)
             .frame(maxWidth: .infinity, minHeight: 56)
             .background(connectButtonBackground, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var requestActions: some View {
+        HStack(spacing: 10) {
+            Button("Delete") {
+                app.declineFriendRequest(from: player.id)
+                dismiss()
+            }
+            .font(RallyType.action)
+            .foregroundStyle(RallyPalette.ink)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(RallyPalette.creamDeep, in: Capsule())
+
+            Button("Accept") {
+                app.acceptFriendRequest(from: player.id)
+                dismiss()
+            }
+            .font(RallyType.action)
+            .foregroundStyle(RallyPalette.cream)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(RallyPalette.ink, in: Capsule())
         }
         .buttonStyle(.plain)
     }

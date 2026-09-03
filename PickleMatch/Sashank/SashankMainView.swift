@@ -172,11 +172,11 @@ struct SashankMainView: View {
                 Button { openGlobalPage(.notifications) } label: {
                     Image(systemName: "bell")
                         .font(.system(size: 19, weight: .semibold))
-                        .frame(width: 46, height: 46)
-                        .background(RallyPalette.cream.opacity(0.96), in: Circle())
                         .overlay(alignment: .topTrailing) {
                             if app.notificationCount > 0 { unreadDot }
                         }
+                        .frame(width: 46, height: 46)
+                        .background(RallyPalette.cream.opacity(0.96), in: Circle())
                 }
                 .buttonStyle(RallyPressStyle())
                 .accessibilityLabel(app.notificationCount == 0 ? "Notifications" : "Notifications, unread items")
@@ -184,11 +184,11 @@ struct SashankMainView: View {
                 Button { openGlobalPage(.chats) } label: {
                     Image(systemName: "paperplane")
                         .font(.system(size: 19, weight: .semibold))
-                        .frame(width: 46, height: 46)
-                        .background(RallyPalette.cream.opacity(0.96), in: Circle())
                         .overlay(alignment: .topTrailing) {
                             if hasUnreadChatMessages { unreadDot }
                         }
+                        .frame(width: 46, height: 46)
+                        .background(RallyPalette.cream.opacity(0.96), in: Circle())
                 }
                 .buttonStyle(RallyPressStyle())
                 .accessibilityLabel(hasUnreadChatMessages ? "Chats, unread messages" : "Chats")
@@ -202,8 +202,8 @@ struct SashankMainView: View {
     private var unreadDot: some View {
         Circle()
             .fill(MP.accent(app.activeSport))
-            .frame(width: 10, height: 10)
-            .overlay(Circle().stroke(MP.background, lineWidth: 2))
+            .frame(width: 8, height: 8)
+            .overlay(Circle().stroke(MP.background, lineWidth: 1.5))
             .offset(x: 1, y: -1)
     }
 
@@ -450,6 +450,8 @@ private struct NativeHomeScreen: View {
     @State private var displayedRating = 0
     @State private var showAllVerifications = false
     @State private var showAllRequests = false
+    private let sectionHeaderSpacing: CGFloat = 8
+    private let sectionContentTopInset: CGFloat = 8
 
     private var players: [Player] { app.players.filter { $0.profile(app.activeSport) != nil } }
     private var verifications: [FaceOff] {
@@ -530,6 +532,9 @@ private struct NativeHomeScreen: View {
                 if arguments.contains("-demo-all-requests") {
                     showAllRequests = true
                 }
+                if arguments.contains("-demo-request-detail") {
+                    selectedRequest = requestPlayers.first
+                }
                 if arguments.contains("-demo-community") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         proxy.scrollTo("community", anchor: .top)
@@ -577,7 +582,7 @@ private struct NativeHomeScreen: View {
         @ViewBuilder card: @escaping (Player, Int) -> some View,
         actionHandler: (() -> Void)? = nil
     ) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
             MPSectionHeader(title: title, action: action, actionHandler: actionHandler)
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -588,7 +593,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 12)
+                .padding(.top, sectionContentTopInset)
                 .padding(.bottom, 8)
             }
         }
@@ -596,7 +601,7 @@ private struct NativeHomeScreen: View {
     }
 
     private var challengeSection: some View {
-        return VStack(alignment: .leading, spacing: 5) {
+        return VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
             MPSectionHeader(
                 title: app.activeSport.category == .group ? "Upcoming games" : "Challenges",
                 action: app.activeSport.category == .group ? "Calendar" : "See all",
@@ -613,7 +618,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 3)
+                .padding(.top, sectionContentTopInset)
                 .padding(.bottom, 8)
             }
         }
@@ -621,7 +626,7 @@ private struct NativeHomeScreen: View {
     }
 
     private var requestSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
             MPSectionHeader(title: "Connection requests", action: "See all", actionHandler: { showAllRequests = true })
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -641,7 +646,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 12)
+                .padding(.top, sectionContentTopInset)
                 .padding(.bottom, 8)
             }
         }
@@ -654,7 +659,7 @@ private struct NativeHomeScreen: View {
             .sorted { $0.date < $1.date }
         return Group {
             if !fixtures.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
                     HStack {
                         Text("Upcoming games").font(RallyType.eyebrow).tracking(1.6).textCase(.uppercase).foregroundStyle(MP.ink3)
                         Spacer()
@@ -681,7 +686,9 @@ private struct NativeHomeScreen: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, RallyLayout.gutter).padding(.bottom, 8)
+                        .padding(.horizontal, RallyLayout.gutter)
+                        .padding(.top, sectionContentTopInset)
+                        .padding(.bottom, 8)
                     }
                 }
                 .padding(.top, 24)
@@ -696,7 +703,7 @@ private struct NativeHomeScreen: View {
         items: [FaceOff],
         select: @escaping (FaceOff) -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
             MPSectionHeader(title: title, action: action, actionHandler: actionHandler)
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -718,7 +725,7 @@ private struct NativeHomeScreen: View {
                     }
                 }
                 .padding(.horizontal, RallyLayout.gutter)
-                .padding(.top, 12)
+                .padding(.top, sectionContentTopInset)
                 .padding(.bottom, 8)
             }
         }
@@ -768,7 +775,7 @@ private struct NativeHomeScreen: View {
     }
 
     private var communitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: sectionHeaderSpacing) {
             MPSectionHeader(
                 title: "Courts and clubs near you",
                 action: app.isRefreshingCommunities ? "Finding nearby…" : nil
@@ -785,6 +792,7 @@ private struct NativeHomeScreen: View {
                 .background(MP.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(MP.strongLine))
                 .padding(.horizontal, RallyLayout.gutter)
+                .padding(.top, sectionContentTopInset)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 14) {
@@ -795,6 +803,7 @@ private struct NativeHomeScreen: View {
                         }
                     }
                     .padding(.horizontal, RallyLayout.gutter)
+                    .padding(.top, sectionContentTopInset)
                     .padding(.bottom, 8)
                 }
             }
@@ -1146,69 +1155,10 @@ private struct NativeVerificationDetail: View {
 }
 
 private struct NativeConnectionRequestDetail: View {
-    @EnvironmentObject private var app: AppState
-    @Environment(\.dismiss) private var dismiss
     let player: Player
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Text("Connection request").font(RallyType.title)
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(MP.ink).frame(width: 46, height: 46)
-                        .background(MP.surface, in: Circle()).overlay(Circle().stroke(MP.line, lineWidth: 1.5))
-                }
-                .buttonStyle(RallyPressStyle())
-            }
-            HStack(spacing: 15) {
-                RallyPlayerAvatar(player: player, size: 72, ring: MP.accent(app.activeSport), ringWidth: 3)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(player.name).font(RallyType.title)
-                    Text("@\(player.username.isEmpty ? player.name.lowercased().replacingOccurrences(of: " ", with: "") : player.username) · \(String(format: "%.1f", player.distanceMiles)) miles away")
-                        .font(RallyType.caption).foregroundStyle(MP.ink3)
-                }
-                Spacer()
-                ratingBubble(for: player)
-            }
-            Text(requestMessage)
-                .font(RallyType.body()).foregroundStyle(MP.ink2)
-            Spacer()
-            HStack(spacing: 10) {
-                Button("Delete") {
-                    app.declineFriendRequest(from: player.id)
-                    dismiss()
-                }
-                .font(RallyType.action).foregroundStyle(MP.ink)
-                .frame(maxWidth: .infinity).frame(height: 54)
-                .background(MP.surface2, in: Capsule())
-                Button("Accept") {
-                    app.acceptFriendRequest(from: player.id)
-                    dismiss()
-                }
-                .font(RallyType.action).foregroundStyle(MP.background)
-                .frame(maxWidth: .infinity).frame(height: 54)
-                .background(MP.ink, in: Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(20).background(MP.background).preferredColorScheme(.light)
-    }
-
-    private var requestMessage: String {
-        guard let message = app.conversation(with: player.id)?.lastMessage else { return "Sent you a connection request." }
-        if case let .text(value) = message.kind { return value }
-        return "Sent you a connection request."
-    }
-
-    private func ratingBubble(for player: Player) -> some View {
-        Text("\(player.rating(app.activeSport))")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(MP.ink)
-            .frame(minWidth: 38, minHeight: 30)
-            .background(MP.background, in: Capsule())
-            .overlay(Capsule().stroke(MP.line, lineWidth: 1))
+        ProfileDetailView(player: player, presentationMode: .connectionRequest)
     }
 }
 
@@ -1367,7 +1317,6 @@ private struct NativeVerificationsSheet: View {
                 Spacer()
                 Text(actionLabel)
                     .font(.system(size: 12, weight: .bold))
-                    .underline()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .bold))
             }
@@ -1717,7 +1666,7 @@ private struct NativeMapScreen: View {
     @State private var camera: MapCameraPosition = .region(.init(center: .init(latitude: 30.2672, longitude: -97.7431), span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
     @State private var gender: Gender?
     @State private var rating = "Any rating"
-    @State private var audience = "Everyone"
+    @State private var audience = "All people"
     @State private var selected: Player?
     @State private var activeFilter: NativeMapFilterPanel?
     @State private var visibleRegion = MKCoordinateRegion(
@@ -1728,7 +1677,7 @@ private struct NativeMapScreen: View {
     private var players: [Player] {
         app.players.filter { player in
             guard player.profile(app.activeSport) != nil else { return false }
-            guard audience != "Friends" || app.friendIds.contains(player.id) else { return false }
+            guard audience != "Connections" || app.friendIds.contains(player.id) else { return false }
             guard gender == nil || player.gender == gender else { return false }
             switch rating {
             case "Under 80": return player.rating(app.activeSport) < 80
@@ -1740,7 +1689,7 @@ private struct NativeMapScreen: View {
     }
 
     private var hasAppliedFilters: Bool {
-        audience != "Everyone" || gender != nil || rating != "Any rating"
+        audience != "All people" || gender != nil || rating != "Any rating"
     }
 
     var body: some View {
@@ -1805,7 +1754,7 @@ private struct NativeMapScreen: View {
 
             ZStack(alignment: .topTrailing) {
                 HStack(alignment: .top, spacing: 6) {
-                    filterControl(.audience, text: audience, icon: "person.2")
+                    filterControl(.audience, text: audience == "All people" ? "Connections" : audience, icon: "person.2")
                     filterControl(.gender, text: gender?.rawValue ?? "Gender", icon: "person")
                     filterControl(.rating, text: rating == "Any rating" ? "Rating" : rating, icon: "bolt")
                 }
@@ -1813,7 +1762,7 @@ private struct NativeMapScreen: View {
 
                 if hasAppliedFilters && activeFilter == nil {
                     Button("Clear") {
-                        audience = "Everyone"
+                        audience = "All people"
                         gender = nil
                         rating = "Any rating"
                     }
@@ -1966,7 +1915,7 @@ private struct NativeMapScreen: View {
 
     @ViewBuilder private func filterPanel(_ panel: NativeMapFilterPanel) -> some View {
         let options: [String] = switch panel {
-        case .audience: ["Everyone", "Friends"]
+        case .audience: ["All people", "Connections"]
         case .gender: ["Any gender"] + Gender.allCases.map(\.rawValue)
         case .rating: ["Any rating", "Under 80", "80 to 110", "Above 110"]
         }
@@ -3689,6 +3638,12 @@ private enum NotificationAgeFilter: String, CaseIterable {
     case earlier = "Earlier"
 }
 
+private enum NotificationFilterPanel: CaseIterable {
+    case activity
+    case sport
+    case age
+}
+
 private struct NativeNotificationsPage: View {
     @EnvironmentObject private var app: AppState
     let onBack: () -> Void
@@ -3698,6 +3653,7 @@ private struct NativeNotificationsPage: View {
     @State private var activityFilter: NotificationActivityFilter = .all
     @State private var sportFilter: NotificationSportFilter = .all
     @State private var ageFilter: NotificationAgeFilter = .all
+    @State private var activeFilter: NotificationFilterPanel?
 
     private var requestPlayers: [Player] {
         guard activityFilter == .all || activityFilter == .connections,
@@ -3750,23 +3706,26 @@ private struct NativeNotificationsPage: View {
             Divider().overlay(MP.line)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(spacing: 7) {
-                        notificationFilterMenu(activityFilter.rawValue, icon: "line.3.horizontal.decrease") {
-                            ForEach(NotificationActivityFilter.allCases, id: \.self) { value in
-                                Button(value.rawValue) { activityFilter = value }
-                            }
+                    VStack(spacing: 7) {
+                        HStack(spacing: 7) {
+                            notificationFilterButton(.activity, title: activityFilter.rawValue, icon: "line.3.horizontal.decrease")
+                            notificationFilterButton(.sport, title: sportFilter.rawValue, icon: "sport-outline")
+                            notificationFilterButton(.age, title: ageFilter.rawValue, icon: "clock")
                         }
-                        notificationFilterMenu(sportFilter.rawValue, icon: "sport-outline") {
-                            ForEach(NotificationSportFilter.allCases, id: \.self) { value in
-                                Button(value.rawValue) { sportFilter = value }
+                        if let activeFilter {
+                            HStack(alignment: .top, spacing: 7) {
+                                ForEach(NotificationFilterPanel.allCases, id: \.self) { panel in
+                                    if panel == activeFilter {
+                                        notificationFilterPanel(panel)
+                                    } else {
+                                        Color.clear.frame(height: 1)
+                                    }
+                                }
                             }
-                        }
-                        notificationFilterMenu(ageFilter.rawValue, icon: "clock") {
-                            ForEach(NotificationAgeFilter.allCases, id: \.self) { value in
-                                Button(value.rawValue) { ageFilter = value }
-                            }
+                            .transition(.move(edge: .top).combined(with: .opacity))
                         }
                     }
+                    .animation(.spring(response: 0.3, dampingFraction: 0.84), value: activeFilter)
 
                 if requestPlayers.isEmpty && verifications.isEmpty && challenges.isEmpty && earlierRecords.isEmpty {
                     VStack(spacing: 12) {
@@ -3827,7 +3786,14 @@ private struct NativeNotificationsPage: View {
             }
         }
         .background(MP.background.ignoresSafeArea()).foregroundStyle(MP.ink).preferredColorScheme(.light)
-        .onAppear { app.markAllNotificationsRead() }
+        .onAppear {
+            app.markAllNotificationsRead()
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-demo-notification-filter") {
+                activeFilter = .activity
+            }
+#endif
+        }
         .sheet(item: $selectedPlayer) {
             ProfileDetailView(player: $0).presentationDragIndicator(.hidden)
         }
@@ -3835,12 +3801,10 @@ private struct NativeNotificationsPage: View {
         .sheet(item: $selectedChallenge) { NativeChallengeDetail(faceOff: $0) }
     }
 
-    private func notificationFilterMenu<Content: View>(
-        _ title: String,
-        icon: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        Menu(content: content) {
+    private func notificationFilterButton(_ panel: NotificationFilterPanel, title: String, icon: String) -> some View {
+        Button {
+            activeFilter = activeFilter == panel ? nil : panel
+        } label: {
             HStack(spacing: 5) {
                 if icon == "sport-outline" {
                     SportIcon(sport: sportFilter.sport ?? app.activeSport, size: 15, color: MP.ink)
@@ -3853,6 +3817,7 @@ private struct NativeNotificationsPage: View {
                 Spacer(minLength: 1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .bold))
+                    .rotationEffect(.degrees(activeFilter == panel ? 180 : 0))
             }
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(MP.ink)
@@ -3860,8 +3825,69 @@ private struct NativeNotificationsPage: View {
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(MP.surface2, in: Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RallyPressStyle())
         .frame(maxWidth: .infinity)
+    }
+
+    private func notificationFilterPanel(_ panel: NotificationFilterPanel) -> some View {
+        VStack(spacing: 4) {
+            ForEach(notificationOptions(panel), id: \.self) { option in
+                let selected = selectedNotificationOption(panel) == option
+                Button {
+                    applyNotificationOption(option, to: panel)
+                    activeFilter = nil
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(option)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                        Spacer(minLength: 2)
+                        if selected {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                    }
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(selected ? MP.background : MP.ink)
+                    .padding(.horizontal, 10)
+                    .frame(maxWidth: .infinity, minHeight: 38)
+                    .background(selected ? MP.ink : .clear, in: Capsule())
+                }
+                .buttonStyle(RallyPressStyle())
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .frame(maxWidth: .infinity)
+        .background(MP.background, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .rallyLifted(0.7)
+    }
+
+    private func notificationOptions(_ panel: NotificationFilterPanel) -> [String] {
+        switch panel {
+        case .activity: NotificationActivityFilter.allCases.map(\.rawValue)
+        case .sport: NotificationSportFilter.allCases.map(\.rawValue)
+        case .age: NotificationAgeFilter.allCases.map(\.rawValue)
+        }
+    }
+
+    private func selectedNotificationOption(_ panel: NotificationFilterPanel) -> String {
+        switch panel {
+        case .activity: activityFilter.rawValue
+        case .sport: sportFilter.rawValue
+        case .age: ageFilter.rawValue
+        }
+    }
+
+    private func applyNotificationOption(_ option: String, to panel: NotificationFilterPanel) {
+        switch panel {
+        case .activity:
+            activityFilter = NotificationActivityFilter(rawValue: option) ?? .all
+        case .sport:
+            sportFilter = NotificationSportFilter(rawValue: option) ?? .all
+        case .age:
+            ageFilter = NotificationAgeFilter(rawValue: option) ?? .all
+        }
     }
 
     private func notificationRow<Action: View>(player: Player, text: String, @ViewBuilder action: () -> Action) -> some View {

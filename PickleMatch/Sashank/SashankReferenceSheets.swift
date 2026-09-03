@@ -50,7 +50,7 @@ struct SashankQuickChallengeSheet: View {
             Divider().padding(.top, 12)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 15) {
+                VStack(alignment: .leading, spacing: 20) {
                     fieldLabel("Opponent")
                     opponentSearch
 
@@ -69,24 +69,20 @@ struct SashankQuickChallengeSheet: View {
 
                     fieldLabel("Times you can play")
                     ForEach(proposedDates.indices, id: \.self) { index in
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             Text("\(index + 1)")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(RallyPalette.ink)
-                                .frame(width: 22, height: 22)
+                                .frame(width: 28, height: 28)
                                 .background(app.activeSport.rallyAccent, in: Circle())
-                            DatePicker("", selection: $proposedDates[index], displayedComponents: .date)
-                                .labelsHidden()
-                                .datePickerStyle(.compact)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            DatePicker("", selection: $proposedDates[index], displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                                .datePickerStyle(.compact)
+                            dateControl(index, showsTime: false)
+                                .frame(maxWidth: .infinity)
+                            dateControl(index, showsTime: true)
+                                .frame(width: 112)
                         }
-                        .padding(.horizontal, 10)
-                        .frame(height: 48)
-                        .background(RallyPalette.creamDeep, in: RoundedRectangle(cornerRadius: 13))
-                        .overlay(RoundedRectangle(cornerRadius: 13).stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
+                        .padding(.horizontal, 12)
+                        .frame(height: 58)
+                        .background(RallyPalette.creamDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
 
                     if proposedDates.count < 3 {
@@ -97,8 +93,8 @@ struct SashankQuickChallengeSheet: View {
                                 .font(.system(size: 12, weight: .bold))
                                 .foregroundStyle(RallyPalette.ink)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 42)
-                                .background(app.activeSport.rallyAccent.opacity(0.82), in: RoundedRectangle(cornerRadius: 12))
+                                .frame(height: 50)
+                                .background(RallyPalette.creamDeep, in: Capsule())
                         }
                         .buttonStyle(.plain)
                     }
@@ -163,7 +159,6 @@ struct SashankQuickChallengeSheet: View {
             .padding(.horizontal, 16)
             .frame(height: 52)
             .background(RallyPalette.creamDeep, in: Capsule())
-            .overlay(Capsule().stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
 
             if opponentSearchFocused && !opponentQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 VStack(spacing: 0) {
@@ -205,7 +200,7 @@ struct SashankQuickChallengeSheet: View {
                     }
                 }
                 .background(RallyPalette.creamDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(RallyPalette.ink.opacity(0.18), lineWidth: 1.2))
+                .shadow(color: RallyPalette.ink.opacity(0.08), radius: 12, y: 5)
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
@@ -216,9 +211,8 @@ struct SashankQuickChallengeSheet: View {
         Button { dismiss() } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 13, weight: .bold))
-                .frame(width: 36, height: 36)
+                .frame(width: 40, height: 40)
                 .background(RallyPalette.creamDeep, in: Circle())
-                .overlay(Circle().stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
         }
         .buttonStyle(.plain)
     }
@@ -228,6 +222,35 @@ struct SashankQuickChallengeSheet: View {
             .font(.system(size: 10, weight: .heavy))
             .tracking(1)
             .foregroundStyle(RallyPalette.inkMuted)
+    }
+
+    private func dateControl(_ index: Int, showsTime: Bool) -> some View {
+        let value = proposedDates[index]
+        let title = showsTime
+            ? value.formatted(date: .omitted, time: .shortened)
+            : value.formatted(.dateTime.day().month(.abbreviated).year())
+        let components: DatePickerComponents = showsTime ? .hourAndMinute : .date
+        return ZStack {
+            HStack(spacing: 5) {
+                Text(title)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(RallyPalette.inkMuted)
+            }
+            .padding(.horizontal, 11)
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .background(RallyPalette.cream.opacity(0.9), in: Capsule())
+
+            DatePicker("", selection: $proposedDates[index], displayedComponents: components)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .opacity(0.001)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     private func send() {
@@ -295,10 +318,9 @@ struct SashankScoreUploadSheet: View {
                             Button { setGameCount(count) } label: {
                                 Text("\(count)")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(RallyPalette.ink)
-                                    .frame(width: 36, height: 36)
-                                    .background(gameCount == count ? app.activeSport.rallyAccent : RallyPalette.creamDeep, in: Circle())
-                                    .overlay(Circle().stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
+                                    .foregroundStyle(gameCount == count ? RallyPalette.cream : RallyPalette.ink)
+                                    .frame(width: 38, height: 38)
+                                    .background(gameCount == count ? RallyPalette.ink : RallyPalette.creamDeep, in: Circle())
                             }.buttonStyle(.plain)
                         }
                     }
@@ -316,19 +338,20 @@ struct SashankScoreUploadSheet: View {
                         }
                     }
 
-                    HStack {
+                    HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Session result").font(.system(size: 13, weight: .bold))
+                            Text("Session result").font(.system(size: 14, weight: .bold))
                             Text("\(myWins)–\(opponentWins) games · \(myWins > opponentWins ? "You won the session." : "Opponent won the session.")")
-                                .font(.system(size: 10)).foregroundStyle(RallyPalette.inkMuted)
+                                .font(.system(size: 11)).foregroundStyle(RallyPalette.cream.opacity(0.68))
                         }
                         Spacer()
                         Text("\(myWins)-\(opponentWins)")
-                            .font(.system(size: 11, weight: .bold)).foregroundStyle(RallyPalette.ink)
+                            .font(.system(size: 12, weight: .bold)).foregroundStyle(RallyPalette.ink)
                             .padding(.horizontal, 10).frame(height: 28).background(app.activeSport.rallyAccent, in: Capsule())
                     }
-                    .padding(14).background(RallyPalette.creamDeep, in: RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
+                    .foregroundStyle(RallyPalette.cream)
+                    .padding(16)
+                    .background(RallyPalette.ink, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                     Button(action: submit) {
                         Text("Submit for verification")
@@ -359,15 +382,14 @@ struct SashankScoreUploadSheet: View {
             Capsule().fill(Color.secondary.opacity(0.22)).frame(width: 42, height: 4).padding(.top, 10)
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Upload \(app.activeSport.title) scores").font(.system(size: 20, weight: .bold))
+                    Text("Upload \(app.activeSport.title) scores").font(.system(size: 23, weight: .bold))
                     Text("Singles and doubles sessions are both supported.")
                         .font(.system(size: 12)).foregroundStyle(RallyPalette.inkMuted)
                 }
                 Spacer()
                 Button { dismiss() } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold))
-                        .frame(width: 36, height: 36).background(RallyPalette.creamDeep, in: Circle())
-                        .overlay(Circle().stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
+                    Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
+                        .frame(width: 40, height: 40).background(RallyPalette.creamDeep, in: Circle())
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
@@ -377,7 +399,7 @@ struct SashankScoreUploadSheet: View {
     }
 
     private func label(_ value: String) -> some View {
-        Text(value.uppercased()).font(.system(size: 10, weight: .heavy)).tracking(1).foregroundStyle(RallyPalette.inkMuted)
+        Text(value.uppercased()).font(.system(size: 10, weight: .heavy)).tracking(1.2).foregroundStyle(RallyPalette.ink)
     }
 
     private func playerRole(_ slot: Int) -> String {
@@ -419,7 +441,6 @@ struct SashankScoreUploadSheet: View {
                 }
                 .padding(.horizontal, 14).frame(minHeight: 56)
                 .background(RallyPalette.creamDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(RallyPalette.ink.opacity(0.24), lineWidth: 1.3))
             } else {
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(RallyPalette.inkMuted)
@@ -436,7 +457,6 @@ struct SashankScoreUploadSheet: View {
                 }
                 .padding(.horizontal, 16).frame(height: 52)
                 .background(RallyPalette.creamDeep, in: Capsule())
-                .overlay(Capsule().stroke(RallyPalette.ink.opacity(0.26), lineWidth: 1.3))
 
                 if focusedPlayerSlot == slot && !playerQueries[slot].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     VStack(spacing: 0) {
@@ -469,7 +489,7 @@ struct SashankScoreUploadSheet: View {
                         }
                     }
                     .background(RallyPalette.creamDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(RallyPalette.ink.opacity(0.18), lineWidth: 1.2))
+                    .shadow(color: RallyPalette.ink.opacity(0.08), radius: 12, y: 5)
                 }
             }
         }
@@ -482,10 +502,10 @@ struct SashankScoreUploadSheet: View {
 
     private func winnerButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(.system(size: 11, weight: .bold)).foregroundStyle(RallyPalette.ink)
+            Text(title).font(.system(size: 11, weight: .bold))
+                .foregroundStyle(selected ? RallyPalette.cream : RallyPalette.ink)
                 .frame(maxWidth: .infinity).frame(height: 38)
-                .background(selected ? app.activeSport.rallyAccent.opacity(0.74) : RallyPalette.creamDeep, in: Capsule())
-                .overlay(Capsule().stroke(RallyPalette.ink.opacity(0.30), lineWidth: 1.4))
+                .background(selected ? RallyPalette.ink : RallyPalette.creamDeep, in: Capsule())
         }.buttonStyle(.plain)
     }
 
@@ -528,6 +548,5 @@ private struct ReferenceSegmented: View {
             }
         }
         .padding(4).background(RallyPalette.creamDeep, in: Capsule())
-        .overlay(Capsule().stroke(RallyPalette.ink.opacity(0.28), lineWidth: 1.4))
     }
 }
