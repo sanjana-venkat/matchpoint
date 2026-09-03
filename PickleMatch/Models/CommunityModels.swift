@@ -14,6 +14,8 @@ struct NearbyCommunity: Identifiable, Codable, Sendable {
     let memberCount: Int
     let groupCount: Int
     var isMember: Bool
+    var websiteURL: String? = nil
+    var bookingURL: String? = nil
 
     var isClub: Bool { clubID != nil }
     var locationLine: String {

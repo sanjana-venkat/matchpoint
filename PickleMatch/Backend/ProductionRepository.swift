@@ -213,6 +213,8 @@ private struct NearbyCommunityRow: Decodable, Sendable {
     let memberCount: Int
     let groupCount: Int
     let isMember: Bool
+    let websiteURL: String?
+    let bookingURL: String?
     enum CodingKeys: String, CodingKey {
         case name, description, address, city, latitude, longitude
         case courtID = "court_id"
@@ -221,6 +223,8 @@ private struct NearbyCommunityRow: Decodable, Sendable {
         case memberCount = "member_count"
         case groupCount = "group_count"
         case isMember = "is_member"
+        case websiteURL = "website_url"
+        case bookingURL = "booking_url"
     }
 }
 
@@ -556,7 +560,8 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
                 description: $0.description, address: $0.address, city: $0.city,
                 distanceMiles: $0.distanceMiles, latitude: $0.latitude,
                 longitude: $0.longitude, memberCount: $0.memberCount,
-                groupCount: $0.groupCount, isMember: $0.isMember
+                groupCount: $0.groupCount, isMember: $0.isMember,
+                websiteURL: $0.websiteURL, bookingURL: $0.bookingURL
             )
         }
     }

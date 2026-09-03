@@ -14,7 +14,7 @@ struct ProfileDetailView: View {
     private var isBlocked: Bool { conversation?.isBlocked == true }
     private var otherSports: [Sport] {
         player.profiles.keys
-            .filter { $0 != app.activeSport }
+            .filter { $0 != app.activeSport && $0.isAvailableInBeta }
             .sorted { $0.title < $1.title }
     }
     private var mutualPlayers: [Player] {
@@ -35,10 +35,9 @@ struct ProfileDetailView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         aboutSection
                         sportRatingsSection
-                        mediaRow
                         mutualConnectionsSection
                         connectButton
-                        blockButton
+                        secondaryConnectionButton
                     }
                     .padding(.horizontal, RallyLayout.gutter)
                     .padding(.top, 12)
@@ -136,37 +135,20 @@ struct ProfileDetailView: View {
                 }
 
                 if !otherSports.isEmpty {
-                    Text("They also play \(formattedOtherSports).")
-                        .font(RallyType.caption)
-                        .foregroundStyle(RallyPalette.inkMuted)
+                    Divider().overlay(RallyPalette.rule)
+                    ForEach(otherSports) { sport in
+                        HStack(spacing: 9) {
+                            SportIcon(sport: sport, size: 19)
+                            Text(sport.title)
+                                .font(RallyType.body(15, weight: .semibold))
+                            Spacer()
+                            Text("\(player.rating(sport))")
+                                .font(RallyType.numeral(17))
+                        }
+                    }
                 }
             }
         }
-    }
-
-    private var mediaRow: some View {
-        Button {
-            showNotice("Shared media is simulated in this prototype.")
-        } label: {
-            HStack(spacing: 12) {
-                MediaLineIcon()
-                    .stroke(RallyPalette.ink, style: .init(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
-                    .frame(width: 22, height: 22)
-                Text("Media, links, and documents")
-                    .font(RallyType.body(15, weight: .semibold))
-                    .foregroundStyle(RallyPalette.ink)
-                Spacer()
-                Text("12")
-                    .font(RallyType.caption)
-                    .foregroundStyle(RallyPalette.inkMuted)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(RallyPalette.inkMuted)
-            }
-            .padding(17)
-            .background(RallyPalette.creamDeep.opacity(0.58), in: RoundedRectangle(cornerRadius: RallyLayout.insetRadius, style: .continuous))
-        }
-        .buttonStyle(.plain)
     }
 
     private var mutualConnectionsSection: some View {
@@ -208,22 +190,27 @@ struct ProfileDetailView: View {
         .buttonStyle(.plain)
     }
 
-    private var blockButton: some View {
+    private var secondaryConnectionButton: some View {
         Button {
-            app.toggleBlock(player.id)
-            showNotice(isBlocked ? "\(player.name) has been unblocked." : "\(player.name) has been blocked.")
+            if app.friendshipState(with: player.id) == .incoming {
+                app.declineFriendRequest(from: player.id)
+                dismiss()
+            } else {
+                app.toggleBlock(player.id)
+                showNotice(isBlocked ? "\(player.name) has been unblocked." : "\(player.name) has been blocked.")
+            }
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "nosign")
+                Image(systemName: app.friendshipState(with: player.id) == .incoming ? "xmark" : "nosign")
                     .font(.system(size: 15, weight: .semibold))
-                Text(isBlocked ? "Unblock \(player.name)" : "Block \(player.name)")
+                Text(app.friendshipState(with: player.id) == .incoming ? "Ignore" : (isBlocked ? "Unblock \(player.name)" : "Block \(player.name)"))
                     .font(RallyType.body(15, weight: .semibold))
             }
-            .foregroundStyle(RallyPalette.danger)
+            .foregroundStyle(app.friendshipState(with: player.id) == .incoming ? RallyPalette.ink : RallyPalette.danger)
             .frame(maxWidth: .infinity, minHeight: 56, alignment: .center)
             .overlay(
                 Capsule()
-                    .stroke(RallyPalette.danger.opacity(0.42), lineWidth: 1.5)
+                    .stroke(app.friendshipState(with: player.id) == .incoming ? RallyPalette.rule : RallyPalette.danger.opacity(0.42), lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)

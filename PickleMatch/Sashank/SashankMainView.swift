@@ -16,7 +16,6 @@ struct SashankMainView: View {
     @State private var showFixture = false
     @State private var pendingSport: Sport?
     @State private var showExitWarning = false
-    @State private var didPlayHomeRatingReveal = false
 
     enum Tab: String {
         case map = "Map"
@@ -124,8 +123,7 @@ struct SashankMainView: View {
                 else { NativeMatchesScreen(openProfile: { tab = .profile }) }
             case .home: NativeHomeScreen(
                 openTab: { tab = $0 },
-                switchSport: requestSportChange,
-                didPlayRatingReveal: $didPlayHomeRatingReveal
+                switchSport: requestSportChange
             )
             case .chats: NativeChatsScreen()
             case .profile: NativeProfileScreen()
@@ -363,11 +361,25 @@ private struct MPCard<Content: View>: View {
 private struct MPSectionHeader: View {
     let title: String
     var action: String?
+    var actionHandler: (() -> Void)? = nil
     var body: some View {
         HStack {
-            Text(title).font(RallyType.eyebrow).tracking(1.6).textCase(.uppercase).foregroundStyle(MP.ink3)
+            Text(title)
+                .font(.system(size: 13, weight: .black))
+                .tracking(1.35)
+                .textCase(.uppercase)
+                .foregroundStyle(MP.ink)
             Spacer()
-            if let action { Text(action).font(.system(size: 12, weight: .bold)).foregroundStyle(MP.ink3) }
+            if let action {
+                if let actionHandler {
+                    Button(action, action: actionHandler)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(MP.ink)
+                        .buttonStyle(.plain)
+                } else {
+                    Text(action).font(.system(size: 12, weight: .bold)).foregroundStyle(MP.ink)
+                }
+            }
         }
     }
 }
@@ -376,7 +388,6 @@ private struct NativeHomeScreen: View {
     @EnvironmentObject private var app: AppState
     let openTab: (SashankMainView.Tab) -> Void
     let switchSport: (Sport) -> Void
-    @Binding var didPlayRatingReveal: Bool
     @State private var selectedPlayer: Player?
     @State private var selectedVerification: FaceOff?
     @State private var selectedRequest: Player?
@@ -384,8 +395,9 @@ private struct NativeHomeScreen: View {
     @State private var selectedGroupFixture: GroupFixture?
     @State private var selectedCommunity: NearbyCommunity?
     @State private var notice: String?
-    @State private var heroIsExpanded = false
     @State private var displayedRating = 0
+    @State private var showAllVerifications = false
+    @State private var showAllRequests = false
 
     private var players: [Player] { app.players.filter { $0.profile(app.activeSport) != nil } }
     private var verifications: [FaceOff] {
@@ -413,7 +425,7 @@ private struct NativeHomeScreen: View {
                 LazyVStack(spacing: 0) {
                     hero
                     if !verifications.isEmpty {
-                        faceOffSection("Verifications", action: "\(verifications.count) waiting", items: verifications) { faceOff in
+                        faceOffSection("Verifications", action: "\(verifications.count) waiting", actionHandler: { showAllVerifications = true }, items: verifications) { faceOff in
                             selectedVerification = faceOff
                         }
                     }
@@ -440,6 +452,8 @@ private struct NativeHomeScreen: View {
             .sheet(item: $selectedChallenge) { NativeChallengeDetail(faceOff: $0) }
             .sheet(item: $selectedGroupFixture) { GroupFixtureDetail(fixture: $0) }
             .sheet(item: $selectedCommunity) { CommunityHubSheet(community: $0) }
+            .sheet(isPresented: $showAllVerifications) { NativeVerificationsSheet() }
+            .sheet(isPresented: $showAllRequests) { NativeConnectionRequestsSheet() }
             .overlay(alignment: .top) {
                 if let notice {
                     Text(notice).font(RallyType.caption).foregroundStyle(RallyPalette.cream)
@@ -473,14 +487,13 @@ private struct NativeHomeScreen: View {
             avatar: app.me.avatar,
             sport: app.activeSport,
             name: app.me.firstName,
-            rating: displayedRating,
-            isCompact: !heroIsExpanded
+            rating: displayedRating
         )
         .frame(maxWidth: .infinity)
         .padding(.horizontal, RallyLayout.gutter)
         .padding(.top, 12)
-        .task {
-            await playRatingRevealIfNeeded()
+        .task(id: app.activeSport) {
+            await playRatingChange()
         }
     }
 
@@ -546,14 +559,8 @@ private struct NativeHomeScreen: View {
 
     private var requestSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Connection requests").font(RallyType.eyebrow).tracking(1.6).textCase(.uppercase).foregroundStyle(MP.ink3)
-                Spacer()
-                Button("See all") { openTab(.chats) }
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(MP.ink3)
-            }
-            .padding(.horizontal, RallyLayout.gutter)
+            MPSectionHeader(title: "Connection requests", action: "See all", actionHandler: { showAllRequests = true })
+                .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(requestPlayers) { player in
@@ -561,8 +568,8 @@ private struct NativeHomeScreen: View {
                             PersonPoster(
                                 player: player,
                                 sport: app.activeSport,
-                                line1: "\(String(format: "%.1f", player.distanceMiles)) miles away",
-                                line2: "Recently active",
+                                line1: requestPreview(for: player),
+                                line2: "@\(displayUsername(for: player)) · \(String(format: "%.1f", player.distanceMiles)) mi",
                                 badge: nil,
                                 badgeColor: MP.accent(app.activeSport)
                             )
@@ -621,11 +628,12 @@ private struct NativeHomeScreen: View {
     private func faceOffSection(
         _ title: String,
         action: String?,
+        actionHandler: (() -> Void)? = nil,
         items: [FaceOff],
         select: @escaping (FaceOff) -> Void
     ) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            MPSectionHeader(title: title, action: action)
+            MPSectionHeader(title: title, action: action, actionHandler: actionHandler)
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -660,42 +668,39 @@ private struct NativeHomeScreen: View {
     }
 
     @MainActor
-    private func playRatingRevealIfNeeded() async {
+    private func playRatingChange() async {
         let current = app.me.rating(app.activeSport)
-        displayedRating = current
-        guard !didPlayRatingReveal else {
-            heroIsExpanded = false
-            return
-        }
-
         let history = app.ratingHistory
         let previous = history.dropLast().last?.rating ?? current
         displayedRating = previous
-        heroIsExpanded = true
-        try? await Task.sleep(for: .milliseconds(350))
+        try? await Task.sleep(for: .milliseconds(180))
 
         let difference = current - previous
         if difference != 0 {
             let steps = min(abs(difference), 18)
             for step in 1...steps {
                 guard !Task.isCancelled else { return }
-                try? await Task.sleep(for: .milliseconds(110))
+                try? await Task.sleep(for: .milliseconds(70))
                 let progress = Double(step) / Double(steps)
                 withAnimation(.snappy(duration: 0.18)) {
                     displayedRating = previous + Int((Double(difference) * progress).rounded())
                 }
             }
         } else {
-            try? await Task.sleep(for: .milliseconds(900))
+            withAnimation(.snappy(duration: 0.28)) { displayedRating = current }
         }
+        displayedRating = current
+    }
 
-        try? await Task.sleep(for: .milliseconds(1_100))
-        guard !Task.isCancelled else { return }
-        withAnimation(.spring(response: 0.52, dampingFraction: 0.86)) {
-            displayedRating = current
-            heroIsExpanded = false
-            didPlayRatingReveal = true
-        }
+    private func requestPreview(for player: Player) -> String {
+        guard let message = app.conversation(with: player.id)?.lastMessage else { return "Sent you a connection request" }
+        if case let .text(value) = message.kind { return value }
+        return "Sent you a connection request"
+    }
+
+    private func displayUsername(for player: Player) -> String {
+        let value = player.username.replacingOccurrences(of: "@", with: "")
+        return value.isEmpty ? player.name.lowercased().replacingOccurrences(of: " ", with: "_") : value
     }
 
     private var communitySection: some View {
@@ -799,7 +804,7 @@ private struct CommunityHubSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MPStickySheetHeader(title: community.isClub ? community.name : "Nearby court", dismiss: { dismiss() })
+            MPStickySheetHeader(title: "Facility details", dismiss: { dismiss() })
             Divider().overlay(MP.line)
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -809,37 +814,78 @@ private struct CommunityHubSheet: View {
                             .font(RallyType.body()).foregroundStyle(MP.ink3)
                     }
 
-                    if let message {
-                        Text(message).font(RallyType.caption).foregroundStyle(MP.ink3)
-                            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(MP.surface, in: RoundedRectangle(cornerRadius: 14))
+                    Text(community.description.isEmpty ? "A nearby \(app.activeSport.title.lowercased()) facility for local play." : community.description)
+                        .font(RallyType.body())
+                        .foregroundStyle(MP.ink2)
+                        .lineSpacing(3)
+
+                    Map(
+                        initialPosition: .region(MKCoordinateRegion(
+                            center: CLLocationCoordinate2D(latitude: community.latitude, longitude: community.longitude),
+                            span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
+                        )),
+                        interactionModes: []
+                    ) {
+                        Marker(community.name, coordinate: CLLocationCoordinate2D(latitude: community.latitude, longitude: community.longitude))
+                            .tint(MP.accent(app.activeSport))
                     }
+                    .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                    .frame(height: 210)
+                    .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: RallyLayout.cardRadius).stroke(MP.strongLine, lineWidth: 1))
+                    .allowsHitTesting(false)
 
-                    if let clubID = community.clubID {
-                        Button {
-                            Task { await toggleClub(clubID) }
-                        } label: {
-                            Text(community.isMember ? "Leave club" : "Join club")
-                                .font(RallyType.action).frame(maxWidth: .infinity, minHeight: 52)
-                                .foregroundStyle(community.isMember ? MP.ink : MP.background)
-                                .background(community.isMember ? MP.surface : MP.ink, in: Capsule())
-                                .overlay(Capsule().stroke(MP.strongLine))
+                    VStack(spacing: 0) {
+                        comingSoonRow("Members")
+                        Divider().overlay(MP.line)
+                        comingSoonRow("Groups")
+                    }
+                    .padding(.horizontal, 16)
+                    .background(MP.surface2.opacity(0.55), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+
+                    if let bookingURL = community.bookingURL.flatMap(URL.init(string:)) {
+                        Link(destination: bookingURL) {
+                            HStack {
+                                Text("Book a court")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(RallyType.action)
+                            .foregroundStyle(MP.background)
+                            .padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(MP.ink, in: Capsule())
                         }
-                        .disabled(isWorking)
-
-                        memberSection
-                        groupSection(clubID: clubID)
-                    } else {
-                        createClubSection
+                    } else if let websiteURL = community.websiteURL.flatMap(URL.init(string:)) {
+                        Link(destination: websiteURL) {
+                            HStack {
+                                Text("Visit facility website")
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(RallyType.action)
+                            .foregroundStyle(MP.background)
+                            .padding(.horizontal, 20)
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .background(MP.ink, in: Capsule())
+                        }
                     }
                 }
                 .padding(20).padding(.bottom, 40)
             }
         }
         .background(MP.background)
-        .task { await loadDetail() }
         .presentationDetents([.large])
         .presentationDragIndicator(.hidden)
+    }
+
+    private func comingSoonRow(_ title: String) -> some View {
+        HStack {
+            Text(title).font(RallyType.body(16, weight: .semibold))
+            Spacer()
+            Text("Coming soon").font(RallyType.caption).foregroundStyle(MP.ink3)
+        }
+        .frame(minHeight: 54)
     }
 
     @ViewBuilder private var memberSection: some View {
@@ -1059,14 +1105,14 @@ private struct NativeConnectionRequestDetail: View {
                         .font(RallyType.action)
                 }
             }
-            Text("Would you like to connect and start a conversation?")
-                .font(RallyType.body()).foregroundStyle(MP.ink3)
+            Text(requestMessage)
+                .font(RallyType.body()).foregroundStyle(MP.ink2)
             Spacer()
-            MPPrimaryButton(title: "Accept connection", icon: "person.badge.plus") {
+            MPPrimaryButton(title: "Accept connection", icon: nil) {
                 app.acceptFriendRequest(from: player.id)
                 dismiss()
             }
-            Button("Delete request") {
+            Button("Ignore") {
                 app.declineFriendRequest(from: player.id)
                 dismiss()
             }
@@ -1075,6 +1121,149 @@ private struct NativeConnectionRequestDetail: View {
             .overlay(Capsule().stroke(MP.line, lineWidth: 1.5))
         }
         .padding(20).background(MP.background).preferredColorScheme(.light)
+    }
+
+    private var requestMessage: String {
+        guard let message = app.conversation(with: player.id)?.lastMessage else { return "Sent you a connection request." }
+        if case let .text(value) = message.kind { return value }
+        return "Sent you a connection request."
+    }
+}
+
+private struct NativeConnectionRequestsSheet: View {
+    @EnvironmentObject private var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedPlayer: Player?
+
+    private var players: [Player] {
+        app.players.filter { app.incomingFriendRequestIds.contains($0.id) }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MPStickySheetHeader(title: "Connection requests", dismiss: { dismiss() })
+            Divider().overlay(MP.line)
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    Text("Accepting connects you and moves their conversation into Chats.")
+                        .font(RallyType.caption)
+                        .foregroundStyle(MP.ink3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    ForEach(players) { player in
+                        VStack(alignment: .leading, spacing: 14) {
+                            Button { selectedPlayer = player } label: {
+                                HStack(spacing: 12) {
+                                        RallyPlayerAvatar(player: player, size: 54, ring: MP.accent(app.activeSport), ringWidth: 2)
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(player.name).font(RallyType.cardTitle)
+                                            Text("@\(username(for: player)) · \(player.rating(app.activeSport))")
+                                                .font(RallyType.caption).foregroundStyle(MP.ink3)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(MP.ink3)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            Text(message(for: player))
+                                .font(RallyType.body())
+                                .foregroundStyle(MP.ink2)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            HStack(spacing: 10) {
+                                Button("Ignore") { app.declineFriendRequest(from: player.id) }
+                                    .font(RallyType.action)
+                                    .foregroundStyle(MP.ink)
+                                    .frame(maxWidth: .infinity, minHeight: 46)
+                                    .background(MP.surface, in: Capsule())
+                                Button("Accept connection") { app.acceptFriendRequest(from: player.id) }
+                                    .font(RallyType.action)
+                                    .foregroundStyle(MP.background)
+                                    .frame(maxWidth: .infinity, minHeight: 46)
+                                    .background(MP.ink, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(16)
+                        .background(MP.surface2.opacity(0.6), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                    }
+                }
+                .padding(20)
+                .padding(.bottom, 28)
+            }
+        }
+        .background(MP.background)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .sheet(item: $selectedPlayer) { ProfileDetailView(player: $0) }
+    }
+
+    private func username(for player: Player) -> String {
+        let value = player.username.replacingOccurrences(of: "@", with: "")
+        return value.isEmpty ? player.name.lowercased().replacingOccurrences(of: " ", with: "_") : value
+    }
+
+    private func message(for player: Player) -> String {
+        guard let lastMessage = app.conversation(with: player.id)?.lastMessage else { return "Sent you a connection request." }
+        if case let .text(value) = lastMessage.kind { return value }
+        return "Sent you a connection request."
+    }
+}
+
+private struct NativeVerificationsSheet: View {
+    @EnvironmentObject private var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var selected: FaceOff?
+
+    private var verifications: [FaceOff] {
+        app.faceOffs.filter {
+            $0.sport == app.activeSport && $0.state == .awaitingResult && $0.reportedWinnerByThem != nil
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MPStickySheetHeader(title: "Verifications", dismiss: { dismiss() })
+            Divider().overlay(MP.line)
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(verifications) { faceOff in
+                        if let player = app.player(faceOff.opponentId) {
+                            Button { selected = faceOff } label: {
+                                HStack(spacing: 13) {
+                                    RallyPlayerAvatar(player: player, size: 58)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(player.name).font(RallyType.cardTitle)
+                                        Text(scoreSummary(faceOff)).font(RallyType.caption).foregroundStyle(MP.ink3)
+                                        Text(faceOff.date.formatted(date: .abbreviated, time: .omitted))
+                                            .font(RallyType.caption).foregroundStyle(MP.ink3)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(MP.ink3)
+                                }
+                                .padding(16)
+                                .background(MP.surface2.opacity(0.58), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(20)
+                .padding(.bottom, 28)
+            }
+        }
+        .background(MP.background)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .sheet(item: $selected) { NativeVerificationDetail(faceOff: $0) }
+    }
+
+    private func scoreSummary(_ faceOff: FaceOff) -> String {
+        let mine = faceOff.gameScores.filter(\.iWon).count
+        return "Singles · \(mine)–\(faceOff.gameScores.count - mine) games"
     }
 }
 
@@ -1401,15 +1590,12 @@ private struct NativeMapScreen: View {
                 .ignoresSafeArea(edges: .bottom)
 
             ZStack(alignment: .topTrailing) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 6) {
-                        filterControl(.audience, text: audience, icon: "person.2")
-                        filterControl(.gender, text: gender?.rawValue ?? "Gender", icon: "person")
-                        filterControl(.rating, text: rating == "Any rating" ? "Rating" : rating, icon: "bolt")
-                    }
-                    .padding(.horizontal, 2)
+                HStack(alignment: .top, spacing: 6) {
+                    filterControl(.audience, text: audience, icon: "person.2")
+                    filterControl(.gender, text: gender?.rawValue ?? "Gender", icon: "person")
+                    filterControl(.rating, text: rating == "Any rating" ? "Rating" : rating, icon: "bolt")
                 }
-                .scrollClipDisabled()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 if hasAppliedFilters && activeFilter == nil {
                     Button("Clear") {
@@ -1543,19 +1729,21 @@ private struct NativeMapScreen: View {
     }
 
     private func filterChip(_ text: String, icon: String, width: CGFloat, expanded: Bool) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Image(systemName: icon)
             Text(text)
-                .frame(alignment: .leading)
-            Spacer(minLength: 8)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .allowsTightening(true)
+                .layoutPriority(1)
+            Spacer(minLength: 2)
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(MP.ink3)
                 .rotationEffect(.degrees(expanded ? 180 : 0))
         }
         .font(.system(size: 11.5, weight: .semibold)).foregroundStyle(MP.ink)
-        .lineLimit(1)
-        .padding(.horizontal, 10).frame(width: width).frame(height: 44).background(MP.background, in: Capsule())
+        .padding(.horizontal, 9).frame(width: width).frame(height: 44).background(MP.background, in: Capsule())
         .shadow(color: MP.shadow, radius: 4, y: 1)
     }
 
@@ -1576,11 +1764,6 @@ private struct NativeMapScreen: View {
                     HStack {
                         Text(option).font(.system(size: 11.5, weight: .semibold))
                         Spacer()
-                        if selected {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
                     }
                     .foregroundStyle(selected ? MP.background : MP.ink)
                     .padding(.horizontal, 12)
@@ -1599,9 +1782,9 @@ private struct NativeMapScreen: View {
 
     private func filterPanelWidth(_ panel: NativeMapFilterPanel) -> CGFloat {
         switch panel {
-        case .audience: 132
-        case .gender: 126
-        case .rating: 130
+        case .audience: 118
+        case .gender: 106
+        case .rating: 118
         }
     }
 
@@ -1625,10 +1808,18 @@ private struct NativeMapScreen: View {
 private struct NativeMatchesScreen: View {
     @EnvironmentObject private var app: AppState
     let openProfile: () -> Void
-    @State private var segment = "Upcoming"
     @State private var selected: MatchRecord?
     @State private var selectedChallenge: FaceOff?
-    @State private var selectedFixture: GroupFixture?
+
+    private var upcomingMatches: [FaceOff] {
+        app.faceOffs
+            .filter {
+                $0.sport == app.activeSport &&
+                [.proposed, .confirmed].contains($0.state) &&
+                $0.date >= .now
+            }
+            .sorted { $0.date < $1.date }
+    }
 
     var body: some View {
         ScrollView {
@@ -1637,20 +1828,36 @@ private struct NativeMatchesScreen: View {
                     .font(RallyType.hero)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .rallyDisplayLeading()
-                MPSegmented(options: ["Past", "Upcoming"], selection: $segment)
-                if segment == "Past" {
-                    Text("This log combines scheduled matches and manually uploaded scores.")
-                        .font(.system(size: 12)).foregroundStyle(MP.ink3).frame(maxWidth: .infinity, alignment: .leading)
+
+                MPSectionHeader(title: "Upcoming")
+                    .padding(.top, 4)
+                if upcomingMatches.isEmpty {
+                    Text("No upcoming matches")
+                        .font(RallyType.body())
+                        .foregroundStyle(MP.ink3)
+                        .frame(maxWidth: .infinity, minHeight: 104)
+                        .background(MP.surface2.opacity(0.48), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                } else {
+                    ForEach(upcomingMatches) { match in
+                        Button { selectedChallenge = match } label: {
+                            UpcomingMatchCard(match: match)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                MPSectionHeader(title: "Past")
+                    .padding(.top, 12)
+                if app.myMatches.isEmpty {
+                    Text("No past matches")
+                        .font(RallyType.body())
+                        .foregroundStyle(MP.ink3)
+                        .frame(maxWidth: .infinity, minHeight: 104)
+                        .background(MP.surface2.opacity(0.48), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                } else {
                     ForEach(app.myMatches) { match in
                         Button { selected = match } label: { PastMatchCard(match: match) }.buttonStyle(.plain)
                     }
-                } else {
-                    WeeklyCalendar(
-                        sport: app.activeSport,
-                        selectFaceOff: { selectedChallenge = $0 },
-                        selectFixture: { selectedFixture = $0 }
-                    )
-                    CalendarLegend()
                 }
                 Color.clear.frame(height: 150)
             }
@@ -1664,14 +1871,6 @@ private struct NativeMatchesScreen: View {
             .presentationDetents([.medium, .large])
         }
         .sheet(item: $selectedChallenge) { NativeChallengeDetail(faceOff: $0) }
-        .sheet(item: $selectedFixture) { GroupFixtureDetail(fixture: $0) }
-        .onAppear {
-#if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-demo-past-matches") {
-                segment = "Past"
-            }
-#endif
-        }
     }
 }
 
@@ -2058,6 +2257,49 @@ private struct CalendarLegend: View {
     }
 }
 
+private struct UpcomingMatchCard: View {
+    @EnvironmentObject private var app: AppState
+    let match: FaceOff
+
+    private var opponent: Player? { app.player(match.opponentId) }
+
+    var body: some View {
+        MPCard {
+            HStack(alignment: .center, spacing: 14) {
+                if let opponent {
+                    RallyPhoto(name: opponent.rallyPhotoName, contentMode: .fit)
+                        .frame(width: 58, height: 58)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(match.opponentName)
+                        .font(.system(size: 15.5, weight: .bold))
+                        .lineLimit(2)
+                    Text(match.venue.isEmpty ? "Venue to be decided" : match.venue)
+                        .font(.system(size: 12))
+                        .foregroundStyle(MP.ink3)
+                        .lineLimit(1)
+                    Text(match.state == .confirmed ? "Confirmed" : (match.proposedByMe ? "Awaiting reply" : "Needs your reply"))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(match.state == .confirmed ? MP.ink3 : MP.ink)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(match.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(.system(size: 15, weight: .black))
+                    Text(match.date.formatted(date: .omitted, time: .shortened))
+                        .font(.system(size: 13, weight: .bold))
+                    Text(match.date.formatted(.dateTime.weekday(.abbreviated)))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(MP.ink3)
+                }
+            }
+        }
+    }
+}
+
 private struct PastMatchCard: View {
     @EnvironmentObject private var app: AppState
     let match: MatchRecord
@@ -2187,7 +2429,6 @@ private struct NativeMatchDetail: View {
 
 private struct NativeChatsScreen: View {
     @EnvironmentObject private var app: AppState
-    @State private var segment = "Chats"
     @State private var search = ""
     @State private var selectedProfile: Player?
     @State private var selectedConversation: Conversation?
@@ -2195,13 +2436,8 @@ private struct NativeChatsScreen: View {
 
     private var conversations: [Conversation] {
         app.conversations.filter { conversation in
-            conversation.sport == app.activeSport &&
-            (segment == "Requests" ? conversation.isMessageRequest : !conversation.isMessageRequest)
+            conversation.sport == app.activeSport && !conversation.isMessageRequest
         }
-    }
-
-    private var requestCount: Int {
-        app.conversations.filter { $0.sport == app.activeSport && $0.isMessageRequest }.count
     }
 
     var body: some View {
@@ -2220,7 +2456,6 @@ private struct NativeChatsScreen: View {
                     .buttonStyle(RallyPressStyle())
                     .accessibilityLabel("Create group chat")
                 }
-                chatSegmentedControl
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").foregroundStyle(MP.ink4)
                     TextField("Search by name or username", text: $search)
@@ -2231,23 +2466,12 @@ private struct NativeChatsScreen: View {
                 .frame(height: 52)
                 .background(MP.surface2, in: Capsule())
 
-                if segment == "Requests" && !conversations.isEmpty {
-                    Text("Accepting a request connects you and moves the conversation into your chats.")
-                        .font(RallyType.caption)
-                        .foregroundStyle(MP.ink3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
                 ForEach(conversations.filter { conversation in
                     guard !search.isEmpty, let player = app.player(conversation.partnerId) else { return search.isEmpty }
                     return player.name.localizedCaseInsensitiveContains(search) || player.username.localizedCaseInsensitiveContains(search)
                 }) { conversation in
                     if let player = app.player(conversation.partnerId) {
-                        if segment == "Requests" {
-                            requestCard(conversation, player: player)
-                        } else {
-                            chatRow(conversation, player: player)
-                        }
+                        chatRow(conversation, player: player)
                     }
                 }
                 Color.clear.frame(height: 150)
@@ -2280,39 +2504,8 @@ private struct NativeChatsScreen: View {
                     selectedConversation = conversations.first
                 }
             }
-            if arguments.contains("-demo-requests") {
-                segment = "Requests"
-            }
 #endif
         }
-    }
-
-    private var chatSegmentedControl: some View {
-        HStack(spacing: 3) {
-            ForEach(["Chats", "Requests"], id: \.self) { option in
-                Button { segment = option } label: {
-                    HStack(spacing: 7) {
-                        Text(option)
-                        if option == "Requests" && requestCount > 0 {
-                            Text("\(requestCount)")
-                                .font(.system(size: 10, weight: .heavy))
-                                .foregroundStyle(segment == option ? MP.ink : RallyPalette.cream)
-                                .frame(minWidth: 22, minHeight: 22)
-                                .background(segment == option ? MP.accent(app.activeSport) : MP.ink, in: Circle())
-                        }
-                    }
-                    .font(RallyType.action)
-                    .foregroundStyle(segment == option ? RallyPalette.cream : MP.ink3)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(segment == option ? MP.ink : .clear, in: Capsule())
-                }
-                .buttonStyle(RallyPressStyle())
-                .accessibilityAddTraits(segment == option ? .isSelected : [])
-            }
-        }
-        .padding(4)
-        .background(MP.surface3, in: Capsule())
     }
 
     private func preview(_ conversation: Conversation) -> String {
@@ -2774,7 +2967,7 @@ private struct NativeProfileScreen: View {
                     HStack {
                         Text("How the MP rating works").font(RallyType.action)
                         Spacer()
-                        Image(systemName: "chevron.up").font(.system(size: 13, weight: .bold))
+                        Image(systemName: "arrow.right").font(.system(size: 13, weight: .bold))
                     }
                     .frame(maxWidth: .infinity, minHeight: 36)
                     .contentShape(Rectangle())
