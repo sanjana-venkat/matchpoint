@@ -7,6 +7,7 @@ struct SashankQuickChallengeSheet: View {
     @State private var opponentQuery = ""
     @State private var venue = "Riverside Courts"
     @State private var proposedDates = [Date().addingTimeInterval(86_400)]
+    @State private var dateEditor: ChallengeDateEditor?
     @FocusState private var opponentSearchFocused: Bool
 
     private var candidates: [Player] {
@@ -127,7 +128,23 @@ struct SashankQuickChallengeSheet: View {
                 opponentQuery = "ma"
                 opponentSearchFocused = true
             }
+            if ProcessInfo.processInfo.arguments.contains("-demo-challenge-time-picker") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                    dateEditor = ChallengeDateEditor(index: 0, mode: .time)
+                }
+            }
 #endif
+        }
+        .sheet(item: $dateEditor) { editor in
+            RallyDateTimeEditor(
+                mode: editor.mode,
+                selection: proposedDates[editor.index],
+                accent: app.activeSport.rallyAccent
+            ) { value in
+                proposedDates[editor.index] = value
+            }
+            .presentationDetents([editor.mode == .date ? .medium : .large])
+            .presentationDragIndicator(.hidden)
         }
     }
 
@@ -223,15 +240,30 @@ struct SashankQuickChallengeSheet: View {
     }
 
     private func dateControl(_ index: Int, showsTime: Bool) -> some View {
-        let components: DatePickerComponents = showsTime ? .hourAndMinute : .date
-        return DatePicker("", selection: $proposedDates[index], displayedComponents: components)
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .tint(RallyPalette.sun)
-            .frame(maxWidth: .infinity, minHeight: 38)
-            .background(RallyPalette.cream.opacity(0.9), in: Capsule())
-            .contentShape(Capsule())
-            .accessibilityLabel(showsTime ? "Choose time" : "Choose date")
+        let value = proposedDates[index]
+        let title = showsTime
+            ? value.formatted(date: .omitted, time: .shortened)
+            : value.formatted(.dateTime.day().month(.abbreviated).year())
+        return Button {
+            dateEditor = ChallengeDateEditor(index: index, mode: showsTime ? .time : .date)
+        } label: {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(RallyType.numeral(16))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 2)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(RallyPalette.inkMuted)
+            }
+            .foregroundStyle(RallyPalette.ink)
+            .padding(.horizontal, 13)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background(RallyPalette.cream.opacity(0.92), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showsTime ? "Choose time" : "Choose date")
     }
 
     private func send() {
@@ -246,6 +278,117 @@ struct SashankQuickChallengeSheet: View {
             isRatingExempt: app.isRatingExempt(opponentIds: [opponentId], sport: app.activeSport)
         )
         dismiss()
+    }
+}
+
+private struct ChallengeDateEditor: Identifiable {
+    enum Mode: Equatable { case date, time }
+    let index: Int
+    let mode: Mode
+    var id: String { "\(index)-\(mode == .date ? "date" : "time")" }
+}
+
+private struct RallyDateTimeEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    let mode: ChallengeDateEditor.Mode
+    let selection: Date
+    let accent: Color
+    let select: (Date) -> Void
+
+    private let calendar = Calendar.current
+
+    private var dates: [Date] {
+        let start = calendar.startOfDay(for: .now)
+        return (1...14).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+
+    private var times: [Date] {
+        let day = calendar.startOfDay(for: selection)
+        return stride(from: 7 * 60, through: 22 * 60, by: 30).compactMap { minutes in
+            calendar.date(byAdding: .minute, value: minutes, to: day)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(mode == .date ? "Choose a date" : "Choose a time")
+                    .font(RallyType.title)
+                    .rallyDisplayLeading()
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                        .background(RallyPalette.creamDeep, in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+
+            Divider().overlay(RallyPalette.rule)
+
+            ScrollView {
+                if mode == .date {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(dates, id: \.self) { date in
+                            option(
+                                primary: date.formatted(.dateTime.weekday(.wide)),
+                                secondary: date.formatted(.dateTime.month(.abbreviated).day()),
+                                selected: calendar.isDate(date, inSameDayAs: selection)
+                            ) { replacingDate(with: date) }
+                        }
+                    }
+                } else {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
+                        ForEach(times, id: \.self) { time in
+                            option(
+                                primary: time.formatted(date: .omitted, time: .shortened),
+                                secondary: nil,
+                                selected: sameTime(time, selection)
+                            ) { time }
+                        }
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .background(Color.white.ignoresSafeArea())
+        .foregroundStyle(RallyPalette.ink)
+        .preferredColorScheme(.light)
+    }
+
+    private func option(primary: String, secondary: String?, selected: Bool, value: @escaping () -> Date) -> some View {
+        Button {
+            select(value())
+            dismiss()
+        } label: {
+            VStack(spacing: 3) {
+                Text(primary)
+                    .font(RallyType.numeral(18))
+                if let secondary {
+                    Text(secondary)
+                        .font(RallyType.caption)
+                        .foregroundStyle(selected ? RallyPalette.ink.opacity(0.68) : RallyPalette.inkMuted)
+                }
+            }
+            .foregroundStyle(RallyPalette.ink)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(selected ? accent : RallyPalette.creamDeep.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func replacingDate(with date: Date) -> Date {
+        let time = calendar.dateComponents([.hour, .minute], from: selection)
+        return calendar.date(bySettingHour: time.hour ?? 12, minute: time.minute ?? 0, second: 0, of: date) ?? date
+    }
+
+    private func sameTime(_ lhs: Date, _ rhs: Date) -> Bool {
+        let left = calendar.dateComponents([.hour, .minute], from: lhs)
+        let right = calendar.dateComponents([.hour, .minute], from: rhs)
+        return left.hour == right.hour && left.minute == right.minute
     }
 }
 
