@@ -34,13 +34,9 @@ struct SashankQuickChallengeSheet: View {
                 .padding(.top, 10)
 
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Challenge a \(app.activeSport.title) player")
-                        .font(.system(size: 20, weight: .bold))
-                    Text("Offer up to three slots and let them pick.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(RallyPalette.inkMuted)
-                }
+                Text("Challenge a \(app.activeSport.title) player")
+                    .font(RallyType.title)
+                    .rallyDisplayLeading()
                 Spacer()
                 closeButton
             }
@@ -58,12 +54,14 @@ struct SashankQuickChallengeSheet: View {
                         .font(.system(size: 10))
                         .foregroundStyle(RallyPalette.inkMuted)
 
+                    fieldLabel("Venue")
                     RallyOptionSelector(
                         label: "Venue",
                         selection: venue,
                         options: ["Riverside Courts", "Zilker Courts", "Austin Pickle Ranch"].map {
                             RallySelectorOption(id: $0, title: $0)
                         },
+                        showsLabel: false,
                         select: { venue = $0.title }
                     )
 
@@ -225,32 +223,15 @@ struct SashankQuickChallengeSheet: View {
     }
 
     private func dateControl(_ index: Int, showsTime: Bool) -> some View {
-        let value = proposedDates[index]
-        let title = showsTime
-            ? value.formatted(date: .omitted, time: .shortened)
-            : value.formatted(.dateTime.day().month(.abbreviated).year())
         let components: DatePickerComponents = showsTime ? .hourAndMinute : .date
-        return ZStack {
-            HStack(spacing: 5) {
-                Text(title)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 1)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(RallyPalette.inkMuted)
-            }
-            .padding(.horizontal, 11)
+        return DatePicker("", selection: $proposedDates[index], displayedComponents: components)
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .tint(RallyPalette.sun)
             .frame(maxWidth: .infinity, minHeight: 38)
             .background(RallyPalette.cream.opacity(0.9), in: Capsule())
-
-            DatePicker("", selection: $proposedDates[index], displayedComponents: components)
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .opacity(0.001)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+            .contentShape(Capsule())
+            .accessibilityLabel(showsTime ? "Choose time" : "Choose date")
     }
 
     private func send() {
@@ -381,11 +362,9 @@ struct SashankScoreUploadSheet: View {
         VStack(spacing: 0) {
             Capsule().fill(Color.secondary.opacity(0.22)).frame(width: 42, height: 4).padding(.top, 10)
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Upload \(app.activeSport.title) scores").font(.system(size: 23, weight: .bold))
-                    Text("Singles and doubles sessions are both supported.")
-                        .font(.system(size: 12)).foregroundStyle(RallyPalette.inkMuted)
-                }
+                Text("Upload \(app.activeSport.title) scores")
+                    .font(RallyType.title)
+                    .rallyDisplayLeading()
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark").font(.system(size: 14, weight: .bold))

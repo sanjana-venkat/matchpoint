@@ -600,10 +600,47 @@ final class AppState: ObservableObject {
         }
         activeSport = mySports.first ?? .pickleball
         hasCompletedOnboarding = true
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-onboarding-step") {
+            seedOnboardingPreviewData()
+        }
+#endif
         persistAvailability()
         persistAvatar()
         persistProfileToBackend()
     }
+
+#if DEBUG
+    /// Keeps the complete post-onboarding experience populated when the app is
+    /// launched through the local onboarding preview route.
+    private func seedOnboardingPreviewData() {
+        players = MockData.players()
+        conversations = MockData.conversations(players: players)
+        faceOffs = MockData.faceOffs(players: players)
+        faceOffs.append(contentsOf: MockData.pendingVerifications(players: players))
+        faceOffs.append(contentsOf: MockData.sentVerifications(players: players))
+        matchHistory = MockData.matchHistory()
+        nearbyCommunities = MockData.nearbyCommunities()
+        friendIds = Set(players.prefix(2).map(\.id))
+        incomingFriendRequestIds = Set(players.dropFirst(2).prefix(3).map(\.id))
+        notificationsMarkedRead = false
+
+        let calendar = Calendar.current
+        for (sport, rating, values) in [
+            (Sport.pickleball, 84, [80, 82, 79, 84]),
+            (Sport.badminton, 92, [80, 85, 88, 92])
+        ] where mySports.contains(sport) {
+            if me.profiles[sport] == nil { me.profiles[sport] = SportProfile(sport: sport) }
+            me.profiles[sport]?.rating = rating
+            me.profiles[sport]?.ratingHistory = values.enumerated().map { index, value in
+                RatingPoint(
+                    date: calendar.date(byAdding: .day, value: -(values.count - index) * 7, to: .now) ?? .now,
+                    rating: value
+                )
+            }
+        }
+    }
+#endif
 
     private func persistProfileToBackend() {
         guard let profileRepository else { return }

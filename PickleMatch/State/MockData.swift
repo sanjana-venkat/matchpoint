@@ -191,8 +191,11 @@ enum MockData {
 
     static func faceOffs(players: [Player]) -> [FaceOff] {
         guard players.count > 6 else { return [] }
-        let diego = players[1], aisha = players[4]
+        let diego = players[1], priya = players[2], aisha = players[4]
         return [
+            FaceOff(sport: .pickleball, opponentId: priya.id, opponentName: priya.name,
+                    date: futureDate(days: 2, hour: 18), venue: "Mueller Lake Park Courts",
+                    wager: "Bragging rights", state: .proposed, proposedByMe: true),
             FaceOff(sport: .pickleball, opponentId: diego.id, opponentName: diego.name,
                     date: Date().addingTimeInterval(-5400), venue: "Zilker Courts",
                     wager: "No wager", state: .confirmed),

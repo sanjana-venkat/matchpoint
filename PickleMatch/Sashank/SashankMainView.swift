@@ -455,6 +455,7 @@ private struct NativeHomeScreen: View {
     @State private var displayedRating = 0
     @State private var showAllVerifications = false
     @State private var showAllRequests = false
+    @State private var showAllChallenges = false
     private let sectionHeaderSpacing: CGFloat = 8
     private let sectionContentTopInset: CGFloat = 8
 
@@ -513,6 +514,7 @@ private struct NativeHomeScreen: View {
             .sheet(item: $selectedCommunity) { CommunityHubSheet(community: $0) }
             .sheet(isPresented: $showAllVerifications) { NativeVerificationsSheet() }
             .sheet(isPresented: $showAllRequests) { NativeConnectionRequestsSheet() }
+            .sheet(isPresented: $showAllChallenges) { NativeChallengesSheet() }
             .overlay(alignment: .top) {
                 if let notice {
                     Text(notice).font(RallyType.caption).foregroundStyle(RallyPalette.cream)
@@ -536,6 +538,11 @@ private struct NativeHomeScreen: View {
                 }
                 if arguments.contains("-demo-all-requests") {
                     showAllRequests = true
+                }
+                if arguments.contains("-demo-all-challenges") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        showAllChallenges = true
+                    }
                 }
                 if arguments.contains("-demo-request-detail") {
                     selectedRequest = requestPlayers.first
@@ -610,7 +617,13 @@ private struct NativeHomeScreen: View {
             MPSectionHeader(
                 title: app.activeSport.category == .group ? "Upcoming games" : "Challenges",
                 action: app.activeSport.category == .group ? "Calendar" : "See all",
-                actionHandler: { openTab(.matches) }
+                actionHandler: {
+                    if app.activeSport.category == .group {
+                        openTab(.matches)
+                    } else {
+                        showAllChallenges = true
+                    }
+                }
             )
                 .padding(.horizontal, RallyLayout.gutter)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -754,24 +767,23 @@ private struct NativeHomeScreen: View {
     @MainActor
     private func playRatingChange() async {
         let current = app.me.rating(app.activeSport)
-        let history = app.ratingHistory
-        let previous = history.dropLast().last?.rating ?? current
-        displayedRating = previous
-        try? await Task.sleep(for: .milliseconds(180))
+        let start = displayedRating == 0 ? max(0, current - 8) : displayedRating
+        displayedRating = start
+        try? await Task.sleep(for: .milliseconds(220))
 
-        let difference = current - previous
-        if difference != 0 {
-            let steps = min(abs(difference), 18)
-            for step in 1...steps {
-                guard !Task.isCancelled else { return }
-                try? await Task.sleep(for: .milliseconds(70))
-                let progress = Double(step) / Double(steps)
-                withAnimation(.snappy(duration: 0.18)) {
-                    displayedRating = previous + Int((Double(difference) * progress).rounded())
-                }
+        let difference = current - start
+        guard difference != 0 else {
+            withAnimation(.snappy(duration: 0.25)) { displayedRating = current }
+            return
+        }
+
+        let direction = difference > 0 ? 1 : -1
+        for value in stride(from: start + direction, through: current, by: direction) {
+            guard !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(135))
+            withAnimation(.snappy(duration: 0.2)) {
+                displayedRating = value
             }
-        } else {
-            withAnimation(.snappy(duration: 0.28)) { displayedRating = current }
         }
         displayedRating = current
     }
@@ -1440,6 +1452,114 @@ private struct NativeSentVerificationEditor: View {
             Button { value.wrappedValue += 1 } label: { Image(systemName: "plus") }
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct NativeChallengesSheet: View {
+    @EnvironmentObject private var app: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedChallenge: FaceOff?
+
+    private var awaitingReply: [FaceOff] {
+        app.faceOffs
+            .filter { $0.sport == app.activeSport && $0.state == .proposed }
+            .sorted { $0.date < $1.date }
+    }
+
+    private var upcoming: [FaceOff] {
+        app.faceOffs
+            .filter { $0.sport == app.activeSport && $0.state == .confirmed && $0.date >= .now }
+            .sorted { $0.date < $1.date }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MPStickySheetHeader(title: "Challenges", dismiss: { dismiss() })
+            Divider().overlay(MP.line)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    Text("AWAITING REPLY").rallyEyebrow(MP.ink)
+                    if awaitingReply.isEmpty {
+                        emptyState("No challenges awaiting a reply")
+                    } else {
+                        ForEach(awaitingReply) { challengeRow($0) }
+                    }
+
+                    Text("UPCOMING").rallyEyebrow(MP.ink).padding(.top, 14)
+                    if upcoming.isEmpty {
+                        emptyState("No upcoming challenges")
+                    } else {
+                        ForEach(upcoming) { challengeRow($0) }
+                    }
+                }
+                .padding(20)
+                .padding(.bottom, 28)
+            }
+        }
+        .background(MP.background)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .sheet(item: $selectedChallenge) { NativeChallengeDetail(faceOff: $0) }
+    }
+
+    private func challengeRow(_ faceOff: FaceOff) -> some View {
+        Button { selectedChallenge = faceOff } label: {
+            HStack(spacing: 13) {
+                if let player = app.player(faceOff.opponentId) {
+                    RallyPlayerAvatar(player: player, size: 58)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(player.name)
+                            .font(RallyType.cardTitle)
+                            .lineLimit(1)
+                        Text(faceOff.venue)
+                            .font(RallyType.caption)
+                            .foregroundStyle(MP.ink3)
+                            .lineLimit(1)
+                    }
+                } else {
+                    Circle()
+                        .fill(MP.surface)
+                        .frame(width: 58, height: 58)
+                        .overlay(Image(systemName: "person.fill").foregroundStyle(MP.ink3))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(faceOff.opponentName)
+                            .font(RallyType.cardTitle)
+                            .lineLimit(1)
+                        Text(faceOff.venue)
+                            .font(RallyType.caption)
+                            .foregroundStyle(MP.ink3)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(faceOff.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(RallyType.action)
+                    HStack(spacing: 7) {
+                        Text(faceOff.date.formatted(date: .omitted, time: .shortened))
+                            .font(RallyType.caption)
+                            .foregroundStyle(MP.ink3)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(MP.ink3)
+                    }
+                }
+            }
+            .foregroundStyle(MP.ink)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 92)
+            .background(MP.surface2.opacity(0.58), in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func emptyState(_ title: String) -> some View {
+        Text(title)
+            .font(RallyType.caption)
+            .foregroundStyle(MP.ink3)
+            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+            .padding(.horizontal, 16)
+            .background(MP.surface2.opacity(0.4), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
@@ -3719,12 +3839,12 @@ private struct NativeNotificationsPage: View {
             Divider().overlay(MP.line)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    VStack(spacing: 7) {
-                        HStack(spacing: 7) {
-                            notificationFilterButton(.activity, title: activityFilter.rawValue, icon: "line.3.horizontal.decrease")
-                            notificationFilterButton(.sport, title: sportFilter.rawValue, icon: "sport-outline")
-                            notificationFilterButton(.age, title: ageFilter.rawValue, icon: "clock")
-                        }
+                    HStack(spacing: 7) {
+                        notificationFilterButton(.activity, title: activityFilter.rawValue, icon: "line.3.horizontal.decrease")
+                        notificationFilterButton(.sport, title: sportFilter.rawValue, icon: "sport-outline")
+                        notificationFilterButton(.age, title: ageFilter.rawValue, icon: "clock")
+                    }
+                    .overlay(alignment: .top) {
                         if let activeFilter {
                             HStack(alignment: .top, spacing: 7) {
                                 ForEach(NotificationFilterPanel.allCases, id: \.self) { panel in
@@ -3735,10 +3855,12 @@ private struct NativeNotificationsPage: View {
                                     }
                                 }
                             }
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .padding(.top, 51)
+                            .transition(.opacity)
                         }
                     }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.84), value: activeFilter)
+                    .animation(.easeInOut(duration: 0.16), value: activeFilter)
+                    .zIndex(10)
 
                 if requestPlayers.isEmpty && verifications.isEmpty && challenges.isEmpty && earlierRecords.isEmpty {
                     VStack(spacing: 12) {

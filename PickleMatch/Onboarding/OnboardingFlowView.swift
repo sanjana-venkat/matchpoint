@@ -513,15 +513,13 @@ private struct SportSelectionStep: View {
                 .padding(.top, 12)
 
             HStack {
-                Text("\(selected.count) of 2 sports selected")
+                Text("\(selected.count) sport\(selected.count == 1 ? "" : "s") selected")
                     .font(Theme.ui(12, weight: .bold))
                 Spacer()
-                if selected.count == Sport.betaAvailable.count {
-                    Text("LIMIT REACHED")
-                        .font(Theme.ui(9, weight: .bold))
-                        .tracking(1)
-                        .foregroundStyle(Theme.neonOrange)
-                }
+                Text("SELECT BOTH IF YOU PLAY BOTH")
+                    .font(Theme.ui(9, weight: .bold))
+                    .tracking(1)
+                    .foregroundStyle(Theme.muted)
             }
             .padding(.horizontal, 20)
             .padding(.top, 14)
@@ -567,7 +565,7 @@ private struct SportSelectionStep: View {
     private func sportCard(_ sport: Sport) -> some View {
         let isSelected = selected.contains(sport)
         let comingSoon = !sport.isAvailableInBeta
-        let disabled = comingSoon || (selected.count >= Sport.betaAvailable.count && !isSelected)
+        let disabled = comingSoon
         let detail = comingSoon ? "Coming soon" : "MP Rated"
 
         return Button {
@@ -575,7 +573,7 @@ private struct SportSelectionStep: View {
                 previewSport = sport
                 if isSelected {
                     selected.removeAll { $0 == sport }
-                } else if selected.count < Sport.betaAvailable.count {
+                } else {
                     selected.append(sport)
                 }
             }

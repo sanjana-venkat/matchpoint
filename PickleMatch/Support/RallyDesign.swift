@@ -444,6 +444,7 @@ struct RallyOptionSelector: View {
     let label: String
     let selection: String
     let options: [RallySelectorOption]
+    var showsLabel = true
     let select: (RallySelectorOption) -> Void
     @State private var expanded = false
 
@@ -456,7 +457,9 @@ struct RallyOptionSelector: View {
             } label: {
                 HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(label).rallyEyebrow()
+                        if showsLabel {
+                            Text(label).rallyEyebrow()
+                        }
                         Text(selection)
                             .font(RallyType.action)
                             .foregroundStyle(RallyPalette.ink)
