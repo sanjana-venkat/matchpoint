@@ -359,40 +359,41 @@ private struct WelcomeStory: View {
     var body: some View {
         GeometryReader { proxy in
             let item = pages[page]
+            let heroHeight = min(238, max(184, proxy.size.height * 0.27))
             VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        MultiSportSocialHero(variant: page)
-                            .frame(height: min(330, proxy.size.height * 0.36))
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+                VStack(alignment: .leading, spacing: 0) {
+                    MultiSportSocialHero(variant: page)
+                        .frame(height: heroHeight)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(item.kicker.uppercased())
-                                .font(Theme.ui(11, weight: .bold))
-                                .tracking(1.4)
-                                .foregroundStyle(Theme.muted)
-                            Text(item.title)
-                                .font(Theme.heading(31))
-                                .tracking(-0.7)
-                                .lineSpacing(-1)
-                            Text(item.body)
-                                .font(Theme.ui(15))
-                                .foregroundStyle(Theme.muted)
-                                .lineSpacing(4)
-                            supportingContent
-                        }
-                        .padding(.top, 18)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(item.kicker.uppercased())
+                            .font(Theme.ui(11, weight: .bold))
+                            .tracking(1.4)
+                            .foregroundStyle(Theme.muted)
+                        Text(item.title)
+                            .font(Theme.heading(31))
+                            .tracking(-0.7)
+                            .lineSpacing(-1)
+                        Text(item.body)
+                            .font(Theme.ui(15))
+                            .foregroundStyle(Theme.muted)
+                            .lineSpacing(3)
+                        supportingContent
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
+                    .padding(.top, 14)
                 }
+                .padding(.horizontal, 20)
+
+                Spacer(minLength: 8)
 
                 FlowCTA(
                     title: page == 2 ? "Choose my sports" : "Continue",
                     action: onContinue
                 )
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
                 .background(Theme.bg)
             }
         }
@@ -407,7 +408,7 @@ private struct WelcomeStory: View {
                 Divider().overlay(Theme.hairline)
                 storyRow("03", "Friendly competition", "Track progress without losing the fun.")
             }
-            .padding(.top, 12)
+            .padding(.top, 8)
         } else if page == 1 {
             VStack(spacing: 0) {
                 ratingRow("Even opponent", "+1 to +2 points")
@@ -434,7 +435,7 @@ private struct WelcomeStory: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 13)
+        .padding(.vertical, 10)
     }
 
     private func ratingRow(_ label: String, _ value: String) -> some View {
