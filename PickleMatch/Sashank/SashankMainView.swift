@@ -423,11 +423,16 @@ private struct MPSectionHeader: View {
             Spacer()
             if let action {
                 if let actionHandler {
-                    Button(action, action: actionHandler)
+                    Button(action: actionHandler) {
+                        HStack(spacing: 4) {
+                            Text(action)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .black))
+                        }
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(MP.ink)
-                        .underline()
-                        .buttonStyle(.plain)
+                    }
+                    .buttonStyle(.plain)
                 } else {
                     Text(action).font(.system(size: 12, weight: .bold)).foregroundStyle(MP.ink)
                 }
@@ -663,8 +668,16 @@ private struct NativeHomeScreen: View {
                     HStack {
                         Text("Upcoming games").font(RallyType.eyebrow).tracking(1.6).textCase(.uppercase).foregroundStyle(MP.ink3)
                         Spacer()
-                        Button("Calendar") { openTab(.matches) }.font(.system(size: 12, weight: .bold)).foregroundStyle(MP.ink3)
-                            .underline()
+                        Button { openTab(.matches) } label: {
+                            HStack(spacing: 4) {
+                                Text("Calendar")
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 9, weight: .black))
+                            }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(MP.ink3)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, RallyLayout.gutter)
                     ScrollView(.horizontal, showsIndicators: false) {
