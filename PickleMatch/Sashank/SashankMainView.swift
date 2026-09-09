@@ -1810,7 +1810,7 @@ private struct NativeMapScreen: View {
     private var players: [Player] {
         app.players.filter { player in
             guard player.profile(app.activeSport) != nil else { return false }
-            guard audience != "Connections" || app.friendIds.contains(player.id) else { return false }
+            guard audience != "Friends" || app.friendIds.contains(player.id) else { return false }
             guard gender == nil || player.gender == gender else { return false }
             switch rating {
             case "Under 80": return player.rating(app.activeSport) < 80
@@ -1887,7 +1887,7 @@ private struct NativeMapScreen: View {
 
             ZStack(alignment: .topTrailing) {
                 HStack(alignment: .top, spacing: 6) {
-                    filterControl(.audience, text: audience == "All people" ? "Connections" : audience, icon: "person.2")
+                    filterControl(.audience, text: audience == "All people" ? "Everyone" : "Friends", icon: "person.2")
                     filterControl(.gender, text: gender?.rawValue ?? "Gender", icon: "person")
                     filterControl(.rating, text: rating == "Any rating" ? "Rating" : rating, icon: "bolt")
                 }
@@ -2029,7 +2029,7 @@ private struct NativeMapScreen: View {
             Image(systemName: icon)
             Text(text)
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .minimumScaleFactor(0.94)
                 .allowsTightening(true)
                 .layoutPriority(1)
             Spacer(minLength: 2)
@@ -2038,8 +2038,8 @@ private struct NativeMapScreen: View {
                 .foregroundStyle(MP.ink3)
                 .rotationEffect(.degrees(expanded ? 180 : 0))
         }
-        .font(.system(size: 11.5, weight: .semibold)).foregroundStyle(MP.ink)
-        .padding(.horizontal, 9)
+        .font(.system(size: 13, weight: .semibold)).foregroundStyle(MP.ink)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background(MP.background, in: Capsule())
@@ -2048,7 +2048,7 @@ private struct NativeMapScreen: View {
 
     @ViewBuilder private func filterPanel(_ panel: NativeMapFilterPanel) -> some View {
         let options: [String] = switch panel {
-        case .audience: ["All people", "Connections"]
+        case .audience: ["All people", "Friends"]
         case .gender: ["Any gender"] + Gender.allCases.map(\.rawValue)
         case .rating: ["Any rating", "Under 80", "80 to 110", "Above 110"]
         }
@@ -2061,7 +2061,7 @@ private struct NativeMapScreen: View {
                     activeFilter = nil
                 } label: {
                     HStack {
-                        Text(option).font(.system(size: 11.5, weight: .semibold))
+                        Text(option).font(.system(size: 13, weight: .semibold))
                         Spacer()
                     }
                     .foregroundStyle(selected ? MP.background : MP.ink)
@@ -3377,8 +3377,8 @@ private struct NativeProfileScreen: View {
                     HStack {
                         Text("Delete account").font(RallyType.body(16, weight: .medium))
                         Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 12, weight: .bold))
+                        Image(systemName: "trash")
+                            .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundStyle(RallyPalette.danger)
                     .frame(minHeight: 58)
@@ -3765,16 +3765,9 @@ private enum NotificationSportFilter: String, CaseIterable {
     }
 }
 
-private enum NotificationAgeFilter: String, CaseIterable {
-    case all = "All activity"
-    case new = "New"
-    case earlier = "Earlier"
-}
-
 private enum NotificationFilterPanel: CaseIterable {
     case activity
     case sport
-    case age
 }
 
 private struct NativeNotificationsPage: View {
@@ -3785,35 +3778,31 @@ private struct NativeNotificationsPage: View {
     @State private var selectedChallenge: FaceOff?
     @State private var activityFilter: NotificationActivityFilter = .all
     @State private var sportFilter: NotificationSportFilter = .all
-    @State private var ageFilter: NotificationAgeFilter = .all
     @State private var activeFilter: NotificationFilterPanel?
 
     private var requestPlayers: [Player] {
-        guard activityFilter == .all || activityFilter == .connections,
-              ageFilter != .earlier else { return [] }
+        guard activityFilter == .all || activityFilter == .connections else { return [] }
         return app.players.filter {
             app.incomingFriendRequestIds.contains($0.id) &&
             (sportFilter.sport == nil || $0.profile(sportFilter.sport!) != nil)
         }
     }
     private var verifications: [FaceOff] {
-        guard activityFilter == .all || activityFilter == .verifications,
-              ageFilter != .earlier else { return [] }
+        guard activityFilter == .all || activityFilter == .verifications else { return [] }
         return app.faceOffs.filter {
             (sportFilter.sport == nil || $0.sport == sportFilter.sport) &&
             $0.state == .awaitingResult && $0.reportedWinnerByThem != nil
         }
     }
     private var challenges: [FaceOff] {
-        guard activityFilter == .all || activityFilter == .challenges,
-              ageFilter != .earlier else { return [] }
+        guard activityFilter == .all || activityFilter == .challenges else { return [] }
         return app.faceOffs.filter {
             (sportFilter.sport == nil || $0.sport == sportFilter.sport) &&
             $0.state == .proposed && !$0.proposedByMe
         }
     }
     private var earlierRecords: [MatchRecord] {
-        guard activityFilter == .all, ageFilter != .new else { return [] }
+        guard activityFilter == .all else { return [] }
         return Array(app.matchHistory.filter {
             sportFilter.sport == nil || $0.sport == sportFilter.sport
         }.prefix(8))
@@ -3842,7 +3831,6 @@ private struct NativeNotificationsPage: View {
                     HStack(spacing: 7) {
                         notificationFilterButton(.activity, title: activityFilter.rawValue, icon: "line.3.horizontal.decrease")
                         notificationFilterButton(.sport, title: sportFilter.rawValue, icon: "sport-outline")
-                        notificationFilterButton(.age, title: ageFilter.rawValue, icon: "clock")
                     }
                     .overlay(alignment: .top) {
                         if let activeFilter {
@@ -3948,13 +3936,12 @@ private struct NativeNotificationsPage: View {
                 }
                 Text(title)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.68)
                 Spacer(minLength: 1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 9, weight: .bold))
                     .rotationEffect(.degrees(activeFilter == panel ? 180 : 0))
             }
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(MP.ink)
             .padding(.horizontal, 10)
             .frame(maxWidth: .infinity, minHeight: 44)
@@ -4002,7 +3989,6 @@ private struct NativeNotificationsPage: View {
         switch panel {
         case .activity: NotificationActivityFilter.allCases.map(\.rawValue)
         case .sport: NotificationSportFilter.allCases.map(\.rawValue)
-        case .age: NotificationAgeFilter.allCases.map(\.rawValue)
         }
     }
 
@@ -4010,7 +3996,6 @@ private struct NativeNotificationsPage: View {
         switch panel {
         case .activity: activityFilter.rawValue
         case .sport: sportFilter.rawValue
-        case .age: ageFilter.rawValue
         }
     }
 
@@ -4020,8 +4005,6 @@ private struct NativeNotificationsPage: View {
             activityFilter = NotificationActivityFilter(rawValue: option) ?? .all
         case .sport:
             sportFilter = NotificationSportFilter(rawValue: option) ?? .all
-        case .age:
-            ageFilter = NotificationAgeFilter(rawValue: option) ?? .all
         }
     }
 

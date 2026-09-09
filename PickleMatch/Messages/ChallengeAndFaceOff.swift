@@ -10,6 +10,17 @@ struct ChallengeComposerView: View {
     @State private var note = ""
     @State private var proposedDates = [Date().addingTimeInterval(86_400)]
     @State private var venue = ""
+    @State private var selectedSport: Sport?
+
+    private var sharedSports: [Sport] {
+        app.mySports.filter { $0.isAvailableInBeta && player.profile($0) != nil }
+    }
+
+    private var challengeSport: Sport {
+        if let selectedSport, sharedSports.contains(selectedSport) { return selectedSport }
+        if sharedSports.contains(app.activeSport) { return app.activeSport }
+        return sharedSports.first ?? app.activeSport
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -34,13 +45,43 @@ struct ChallengeComposerView: View {
                         }
                         Spacer()
                         RallyRatingPlate(
-                            sport: app.activeSport,
-                            profile: player.profile(app.activeSport),
+                            sport: challengeSport,
+                            profile: player.profile(challengeSport),
                             diameter: 64
                         )
                     }
                     .padding(18)
                     .background(Theme.surface2, in: RoundedRectangle(cornerRadius: RallyLayout.cardRadius, style: .continuous))
+
+                    challengeField(title: "Sport") {
+                        HStack(spacing: 8) {
+                            ForEach(sharedSports) { sport in
+                                Button {
+                                    selectedSport = sport
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        SportIcon(
+                                            sport: sport,
+                                            size: 22,
+                                            color: challengeSport == sport ? RallyPalette.cream : Theme.ink
+                                        )
+                                        Text(sport.title)
+                                            .font(RallyType.action)
+                                            .lineLimit(1)
+                                    }
+                                    .foregroundStyle(challengeSport == sport ? RallyPalette.cream : Theme.ink)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(
+                                        challengeSport == sport ? Theme.ink : Theme.surface2,
+                                        in: Capsule()
+                                    )
+                                }
+                                .buttonStyle(RallyPressStyle())
+                                .accessibilityAddTraits(challengeSport == sport ? .isSelected : [])
+                            }
+                        }
+                    }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Decide the wager together")
@@ -129,6 +170,11 @@ struct ChallengeComposerView: View {
                 .padding(.trailing, RallyLayout.gutter)
         }
         .preferredColorScheme(.light)
+        .onAppear {
+            if selectedSport == nil {
+                selectedSport = sharedSports.contains(app.activeSport) ? app.activeSport : sharedSports.first
+            }
+        }
     }
 
     private func challengeField<Content: View>(
@@ -145,7 +191,7 @@ struct ChallengeComposerView: View {
     }
 
     private var playerStatus: String {
-        let chosen = app.activeSport
+        let chosen = challengeSport
         guard let profile = player.profile(chosen) else { return chosen.title }
         if profile.usesElo { return "Elo \(profile.rating) · \(EloRating.tier(for: profile.rating))" }
         if chosen.category == .group { return "Peer-rated \(chosen.title) profile" }
@@ -153,13 +199,13 @@ struct ChallengeComposerView: View {
     }
 
     private var isRatingMismatch: Bool {
-        app.isRatingExempt(opponentIds: [player.id], sport: app.activeSport)
+        app.isRatingExempt(opponentIds: [player.id], sport: challengeSport)
     }
 
     private func sendChallenge(isRatingExempt: Bool = false) {
         app.createChallenge(
             with: player,
-            sport: app.activeSport,
+            sport: challengeSport,
             date: proposedDates[0],
             proposedDates: proposedDates,
             venue: venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Venue TBD" : venue,

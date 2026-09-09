@@ -1,16 +1,32 @@
-# Match Point — Dual-State iOS Prototype
+# Match Point — SwiftUI iOS App
 
 For the complete behavior-preservation inventory used for redesign work, see [`SASHANK_FUNCTIONALITY_SPEC.md`](SASHANK_FUNCTIONALITY_SPEC.md).
 
-A production-grade SwiftUI prototype for sports matchmaking and social play. Choose the **New user** state to complete onboarding with an empty account, or the **Established player** state to explore a populated three-sport account with ratings, peer-reviewed cricket skills, friends, chats, challenges, matches, and statistics.
+A SwiftUI sports matchmaking app with onboarding, player discovery, chats, challenges, score verification, per-sport Elo ratings, nearby courts and clubs, and a Supabase backend. The current beta focuses on **Pickleball** and **Badminton**; the remaining sports are visible as coming soon.
 
-Everything runs on in-memory mock data — no backend, no accounts, no network.
+## Fastest way to preview it (no account or API keys)
 
-## Run it
+1. Install **Xcode 16 or newer** on a Mac.
+2. Clone this branch and open `PickleMatch.xcodeproj`.
+3. In Xcode's scheme menu, select **PickleMatch Fake Data**.
+4. Pick an iPhone simulator and press **⌘R**.
 
-1. You need a Mac with **Xcode 16 or newer**.
-2. Open `PickleMatch.xcodeproj`.
-3. Pick an iPhone simulator (e.g. iPhone 15) and press **⌘R**.
+The fake-data scheme needs no Supabase account. It includes populated profiles, chats, notifications, challenges, verifications, matches, ratings, courts, and clubs so the complete interface can be reviewed immediately.
+
+```bash
+git clone --branch codex/fake-data-preview --single-branch https://github.com/sanjana-venkat/matchpoint.git
+cd matchpoint
+open PickleMatch.xcodeproj
+```
+
+## Run against Supabase
+
+1. Copy `Config/Secrets.example.xcconfig` to `Config/Secrets.xcconfig`.
+2. Add the project's Supabase URL and **publishable** key. Never add a service-role key.
+3. Select the **PickleMatch** scheme and press **⌘R**.
+4. Apply the versioned database migrations by following [`supabase/README.md`](supabase/README.md).
+
+`Config/Secrets.xcconfig` is intentionally ignored by Git, so each developer keeps local credentials outside the repository.
 
 The project uses an Xcode "synchronized" file group, so every `.swift` file in the `PickleMatch/` folder is compiled automatically — no manual target membership needed. Minimum deployment target is **iOS 17**.
 
@@ -18,7 +34,7 @@ The project uses an Xcode "synchronized" file group, so every `.swift` file in t
 
 **Onboarding (first launch)**
 - Basic details: name, gender, age, and avatar picker (12 illustrated avatars)
-- Sport selection: pickleball, badminton, or both (both unlocks an in-app mode toggle)
+- Sport selection: pickleball, badminton, or both, with future sports marked coming soon
 - Rating intro: explains the 1–100 scale, assigns everyone a starting **50**, shows how points are won/lost
 - Sport questions: doubles-partner status, home court, equipment, tournament history, self-assessment
 
@@ -29,7 +45,7 @@ The project uses an Xcode "synchronized" file group, so every `.swift` file in t
 
 **Messaging**
 - Conversation inbox + 1:1 chat
-- Two message types: **start a conversation** or **send a challenge**
+- Unified, sport-neutral chats with sport-aware challenges. The composer offers only Pickleball and/or Badminton when both people play them.
 - Challenges support a **free-form wager** with suggestion hints (a beer, a meal, cash, a pickleball…)
 - Attach a photo or location; **block** and **report** from the chat menu
 
@@ -65,6 +81,6 @@ PickleMatch/
 
 On a 1–100 scale (`EloRating.swift`), expected score is the standard Elo logistic curve with a divisor tuned for the compressed range, and the new rating is `R + K·(actual − expected)`. Because `expected` is high when you're favored, beating a much stronger opponent produces a large gain and beating a much weaker one produces almost nothing — mirroring chess.com. Values are clamped to 1–100.
 
-## Notes & next steps
+## Backend status
 
-This is a front-end prototype. To make it real you'd add: a backend + auth, real geolocation/distance, push notifications for challenges and result confirmations, photo uploads, and persistence (the models already conform to `Codable`). Badminton is wired as a full second "mode" but shares pickleball's UI; sport-specific tuning can come later.
+The production scheme includes Supabase authentication and repositories for profiles, sport profiles, availability, social connections, chat, challenges, matches, rating events, notifications, moderation, courts, clubs, and groups. Location permission and nearby-player syncing are wired into the authenticated app flow. Before public release, use the [`TESTFLIGHT_CHECKLIST.md`](TESTFLIGHT_CHECKLIST.md), configure production secrets, apply every migration, and test Row Level Security with multiple accounts.
