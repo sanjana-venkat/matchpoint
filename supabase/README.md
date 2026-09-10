@@ -11,6 +11,16 @@ production-only schema change in the dashboard: add a migration here first.
 4. Link this repository with `supabase link --project-ref YOUR_PROJECT_REF`.
 5. Review the migration, then apply it with `supabase db push`.
 
+For the hosted beta project in this repository, the project reference is
+`cdipgccbwwaojqkubbuj`. Link it from your own authenticated terminal session;
+do not share the database password or an access token in chat:
+
+```sh
+supabase login
+supabase link --project-ref cdipgccbwwaojqkubbuj
+supabase db push
+```
+
 The initial migration creates identity, sports, availability, social graph,
 chat, challenges, matches, immutable rating events, moderation, notification,
 and account-deletion tables. Every client-facing table has Row Level Security.
@@ -19,6 +29,19 @@ The first external beta enables Pickleball and Badminton only. Later sport
 profiles remain decodable but inactive. Courts discovered through Apple Maps
 are cached in `courts`; users can create a club at a court, join its membership
 roster, and create or join groups inside that club.
+
+## Closed-beta verification
+
+`tests/closed_beta_integrity.sql` exercises the highest-risk multi-account
+flows in one rolled-back transaction: accepting a chat request, enforcing a
+shared active sport and accepted connection for challenges, uploading a match,
+agreeing on its result from two accounts, and settling exactly one immutable
+rating event per participant.
+
+Run the complete migration chain against a disposable local database before
+every hosted push. After pushing, repeat the core flows with at least two real
+test accounts because local SQL tests do not exercise email delivery, deep
+links, device permissions, or network failures.
 
 ## Authentication redirects
 

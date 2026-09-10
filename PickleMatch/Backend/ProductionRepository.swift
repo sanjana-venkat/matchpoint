@@ -743,7 +743,10 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
             }
             let state = FaceOffState(rawValue: row.status) ?? .proposed
             let myOutcome = row.myReportedTeam.map { $0 == myTeam ? MatchOutcome.iWon : .theyWon }
-            let theirOutcome = row.otherReportedTeam.map { $0 == myTeam ? MatchOutcome.iWon : .theyWon }
+            // `reportedWinnerByThem` is expressed from the reporting opponent's
+            // perspective throughout AppState. If they selected our team, their
+            // outcome is therefore "they won", not "I won".
+            let theirOutcome = row.otherReportedTeam.map { $0 == myTeam ? MatchOutcome.theyWon : .iWon }
             let opponentName = names.joined(separator: " & ")
             let faceOff = FaceOff(
                 id: row.matchID ?? row.challengeID ?? UUID(),

@@ -1349,9 +1349,38 @@ final class AppState: ObservableObject {
     func verifyIncomingResult(faceOffId: UUID, agrees: Bool) {
         guard let index = faceOffs.firstIndex(where: { $0.id == faceOffId }),
               let theirs = faceOffs[index].reportedWinnerByThem else { return }
+        let mine = agrees ? theirs.mirrored : theirs
+        faceOffs[index].reportedWinnerByMe = mine
+
+        if let productionRepository, hydratedUserID != nil {
+            faceOffs[index].state = agrees ? .awaitingResult : .resultDisputed
+            let matchID = faceOffs[index].backendMatchID
+            let myTeam = faceOffs[index].myTeam
+            let winningTeam = mine == .iWon ? myTeam : (myTeam == 1 ? 2 : 1)
+            let scores = myTeam == 1 ? faceOffs[index].gameScores : faceOffs[index].gameScores.map {
+                GameScore(id: $0.id, myScore: $0.opponentScore, opponentScore: $0.myScore)
+            }
+            Task {
+                do {
+                    guard let matchID else {
+                        backendSyncError = "This match is still loading. Please try again."
+                        return
+                    }
+                    try await productionRepository.reportMatchResult(
+                        matchID: matchID,
+                        winningTeam: winningTeam,
+                        scores: scores
+                    )
+                    await refreshMatchbook()
+                } catch {
+                    backendSyncError = error.localizedDescription
+                    await refreshMatchbook()
+                }
+            }
+            return
+        }
+
         if agrees {
-            let mine = theirs.mirrored
-            faceOffs[index].reportedWinnerByMe = mine
             settleRating(faceOffIndex: index, iWon: mine == .iWon)
         } else {
             faceOffs[index].state = .resultDisputed
