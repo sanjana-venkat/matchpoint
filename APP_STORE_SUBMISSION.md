@@ -6,13 +6,15 @@ from the codebase.
 
 ## App identity
 
-- App name: **Match Point**
+- App Store listing name: **Match Point: Play Nearby**
+- Installed display name: **Match Point**
+- App Store Connect Apple ID: **6810871341**
 - Platform: **iOS**
 - Primary language: **English (U.S.)**
 - Version: **1.0**
 - Build: **1** (increment for every uploaded archive)
 - Bundle ID: **`com.sashanksanjana.matchpoint`** — confirmed for the beta
-- SKU: **`MATCHPOINT-IOS-001`**
+- SKU: **`matchpoint-ios-2026`**
 - Primary category: **Sports**
 - Secondary category: **Social Networking**
 - Price: **Free** for the beta
