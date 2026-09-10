@@ -211,6 +211,20 @@ final class AppState: ObservableObject {
         return requestCount + verificationCount + challengeCount
     }
 
+    func registerPushToken(_ token: String) async {
+        guard hydratedUserID != nil, let productionRepository else { return }
+#if DEBUG
+        let environment = "development"
+#else
+        let environment = "production"
+#endif
+        do {
+            try await productionRepository.registerDeviceToken(token, environment: environment)
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
     func syncLocationAndRefresh(_ location: CLLocation) async {
         guard let productionRepository, hydratedUserID != nil else { return }
         do {

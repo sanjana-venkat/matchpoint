@@ -1,6 +1,6 @@
 # Match Point Privacy Policy — draft
 
-**Effective date:** [OWNER INPUT]
+**Effective date:** September 10, 2026
 
 This draft must be reviewed and completed before publication. Replace every
 bracketed placeholder and have the final policy reviewed for the jurisdictions
@@ -116,7 +116,6 @@ date and provide additional notice when legally required.
 
 [POSTAL ADDRESS]
 
-[SUPPORT/PRIVACY EMAIL]
+matchpoint.app.support@gmail.com
 
 [PUBLIC WEBSITE]
-

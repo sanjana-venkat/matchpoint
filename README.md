@@ -4,6 +4,8 @@ For the complete behavior-preservation inventory used for redesign work, see [`S
 
 A SwiftUI sports matchmaking app with onboarding, player discovery, chats, challenges, score verification, per-sport Elo ratings, nearby courts and clubs, and a Supabase backend. The current beta focuses on **Pickleball** and **Badminton**; the remaining sports are visible as coming soon.
 
+Public pages: [Match Point](https://website-mu-ivory-jxjijloosj.vercel.app/), [Privacy](https://website-mu-ivory-jxjijloosj.vercel.app/privacy/), and [Support](https://website-mu-ivory-jxjijloosj.vercel.app/support/).
+
 ## Fastest way to preview it (no account or API keys)
 
 1. Install **Xcode 16 or newer** on a Mac.
@@ -84,3 +86,7 @@ On a 1–100 scale (`EloRating.swift`), expected score is the standard Elo logis
 ## Backend status
 
 The production scheme includes Supabase authentication and repositories for profiles, sport profiles, availability, social connections, chat, challenges, matches, rating events, notifications, moderation, courts, clubs, and groups. Location permission and nearby-player syncing are wired into the authenticated app flow. Before public release, use the [`TESTFLIGHT_CHECKLIST.md`](TESTFLIGHT_CHECKLIST.md), configure production secrets, apply every migration, and test Row Level Security with multiple accounts.
+
+Native APNs registration and server delivery are included. The account owner
+must complete the one-time Apple key and Supabase webhook steps in
+[`PUSH_NOTIFICATIONS_SETUP.md`](PUSH_NOTIFICATIONS_SETUP.md).

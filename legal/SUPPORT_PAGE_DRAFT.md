@@ -1,6 +1,6 @@
 # Match Point Support — draft
 
-Need help with Match Point? Contact **[SUPPORT EMAIL]** and include your iPhone
+Need help with Match Point? Contact **matchpoint.app.support@gmail.com** and include your iPhone
 model, iOS version, Match Point version, and a short description of what
 happened. Do not email your password or verification code.
 
@@ -32,12 +32,12 @@ services. Match Point is not an emergency service.
 ## Delete your account
 
 Open Profile, choose account configuration, and select Reset/Delete Account.
-Follow the confirmation steps. For help with deletion, contact **[PRIVACY
-EMAIL]** from the email address associated with the account.
+Follow the confirmation steps. For help with deletion, contact
+**matchpoint.app.support@gmail.com** from the email address associated with the
+account.
 
 ## Beta feedback
 
-Beta testers can report a problem through TestFlight or email **[SUPPORT
-EMAIL]**. Include the steps that led to the problem and a screenshot when it is
+Beta testers can report a problem through TestFlight or email
+**matchpoint.app.support@gmail.com**. Include the steps that led to the problem and a screenshot when it is
 safe to do so.
-

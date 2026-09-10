@@ -34,3 +34,6 @@ file_size_limit = "10MiB"
 
 [realtime]
 enabled = true
+
+[functions.send-push]
+verify_jwt = false

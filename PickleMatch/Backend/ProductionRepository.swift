@@ -24,6 +24,7 @@ struct BackendMatchbookSnapshot: Sendable {
 }
 
 protocol ProductionRepository: Sendable {
+    func registerDeviceToken(_ token: String, environment: String) async throws
     func updateLocation(_ location: CLLocation) async throws
     func clearLocation() async throws
     func fetchCommunity(sport: Sport, radiusMiles: Double) async throws -> BackendCommunitySnapshot
@@ -81,6 +82,15 @@ struct BackendUploadedMatchDraft: Sendable {
 }
 
 private struct EmptyParameters: Encodable, Sendable {}
+
+private struct DeviceTokenParameters: Encodable, Sendable {
+    let token: String
+    let environment: String
+    enum CodingKeys: String, CodingKey {
+        case token = "p_token"
+        case environment = "p_environment"
+    }
+}
 
 private struct InboxMessageRow: Decodable, Sendable {
     let id: UUID
@@ -540,6 +550,13 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
     private static let isoFormatter = ISO8601DateFormatter()
 
     init(client: SupabaseClient) { self.client = client }
+
+    func registerDeviceToken(_ token: String, environment: String) async throws {
+        try await client.rpc("register_device_token", params: DeviceTokenParameters(
+            token: token,
+            environment: environment
+        )).execute()
+    }
 
     func updateLocation(_ location: CLLocation) async throws {
         try await client.rpc("update_my_location", params: UpdateLocationParameters(

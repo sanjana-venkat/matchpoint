@@ -11,8 +11,7 @@ from the codebase.
 - Primary language: **English (U.S.)**
 - Version: **1.0**
 - Build: **1** (increment for every uploaded archive)
-- Bundle ID: **`com.picklematch.PickleMatch`** — confirm before creating the App
-  Store Connect record
+- Bundle ID: **`com.picklematch.PickleMatch`** — confirmed for the beta
 - SKU: **`MATCHPOINT-IOS-001`**
 - Primary category: **Sports**
 - Secondary category: **Social Networking**
@@ -73,11 +72,11 @@ Welcome to the first Match Point beta: discover players, connect and chat,
 schedule matches, verify scores, and build separate pickleball and badminton
 ratings.
 
-## URLs — OWNER INPUT
+## URLs
 
-- Privacy policy URL: **required**
-- Support URL: **required**
-- Marketing URL: optional
+- Privacy policy URL: **https://website-mu-ivory-jxjijloosj.vercel.app/privacy/**
+- Support URL: **https://website-mu-ivory-jxjijloosj.vercel.app/support/**
+- Marketing URL: **https://website-mu-ivory-jxjijloosj.vercel.app/**
 - User privacy choices URL: optional; recommended to link directly to account
   deletion and privacy instructions
 
@@ -85,10 +84,9 @@ Draft page content is available in `legal/PRIVACY_POLICY_DRAFT.md` and
 `legal/SUPPORT_PAGE_DRAFT.md`. These documents must be reviewed, completed, and
 published at public HTTPS URLs before submission.
 
-## App icon and screenshots — OWNER INPUT
+## App icon and screenshots
 
-- Provide the final 1024 × 1024 app icon artwork. The current
-  `AppIcon.appiconset` contains no image.
+- The supplied Match Point artwork is installed as the 1024 × 1024 app icon.
 - Do not pre-round the icon or add transparent corners.
 - Capture final screenshots from the production-signed UI after the icon,
   display name, and production backend are confirmed.
@@ -174,16 +172,14 @@ declaration from this draft alone.
 
 ## Information still needed from the owner
 
-1. Apple membership status must change from Pending to Active.
-2. Confirm the permanent bundle ID.
-3. Final 1024 × 1024 app icon.
-4. Public privacy-policy URL.
-5. Public support URL and support email.
-6. Public copyright/legal seller name.
-7. App Review contact name, phone number, and email.
-8. A dedicated pre-confirmed App Review account.
-9. APNs Team ID and Key ID after push capability is enabled. Keep the `.p8`
+1. Final app icon verification in an archive (artwork supplied September 10,
+   2026).
+2. Public copyright/legal seller name.
+3. App Review contact name, phone number, and email.
+4. A dedicated pre-confirmed App Review account.
+5. APNs Team ID and Key ID after push capability is enabled. Keep the `.p8`
    private key out of Git and chat; store it only as a Supabase secret.
-10. Two physical iPhones and two separate test accounts for the first end-to-end
+6. Two physical iPhones and two separate test accounts for the first end-to-end
     production smoke test.
 
+Support email: **matchpoint.app.support@gmail.com**

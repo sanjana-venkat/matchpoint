@@ -3,6 +3,7 @@ import Combine
 
 @main
 struct PickleMatchApp: App {
+    @UIApplicationDelegateAdaptor(MatchPointAppDelegate.self) private var appDelegate
     @StateObject private var app = AppState()
     @StateObject private var session = BackendSessionController()
     @StateObject private var location = LocationService()
@@ -17,6 +18,9 @@ struct PickleMatchApp: App {
                 .preferredColorScheme(.light)
                 .task { session.start() }
                 .onOpenURL { session.handleAuthCallback($0) }
+                .onReceive(PushNotificationService.shared.$deviceToken.compactMap { $0 }) { token in
+                    Task { await app.registerPushToken(token) }
+                }
         }
     }
 }
@@ -62,7 +66,12 @@ struct RootView: View {
             Task { await app.syncLocationAndRefresh(value) }
         }
         .onChange(of: app.hasCompletedOnboarding) { _, completed in
-            if completed { location.requestWhenInUseAccess() }
+            if completed {
+                location.requestWhenInUseAccess()
+                if !usesDemoLaunchArguments {
+                    Task { await PushNotificationService.shared.requestAuthorizationAndRegister() }
+                }
+            }
         }
     }
 
@@ -117,7 +126,10 @@ struct RootView: View {
         }
         .task(id: userID) {
             await app.hydrateAuthenticatedUser(id: userID)
-            if app.hasCompletedOnboarding { location.requestWhenInUseAccess() }
+            if app.hasCompletedOnboarding {
+                location.requestWhenInUseAccess()
+                await PushNotificationService.shared.requestAuthorizationAndRegister()
+            }
         }
     }
 

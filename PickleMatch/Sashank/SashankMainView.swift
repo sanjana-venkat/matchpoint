@@ -109,6 +109,10 @@ struct SashankMainView: View {
             }
 #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: .matchPointPushOpened)) { notification in
+            let kind = notification.object as? String
+            openGlobalPage(kind == "message" ? .chats : .notifications)
+        }
         .sheet(isPresented: $showScore) {
             SashankScoreUploadSheet { showScore = false }
                 .presentationDetents([.large])
