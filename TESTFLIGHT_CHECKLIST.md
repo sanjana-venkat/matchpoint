@@ -6,7 +6,8 @@ below.
 
 ## Required from the app owner
 
-- Enroll in the Apple Developer Program and accept active agreements.
+- Apple Developer Program enrollment was submitted on September 10, 2026 and
+  is currently **Pending**. Wait for activation and accept active agreements.
 - Create an App Store Connect app with the final bundle identifier. The current
   development identifier is `com.picklematch.PickleMatch`.
 - Select the Apple development team in both the Match Point app and widget
@@ -17,6 +18,9 @@ below.
   challenges, scores, and rating history. It does not use this data for tracking.
 - Add final App Store screenshots, description, age rating, category, and app
   review contact details.
+
+The drafted listing copy, privacy answers, review notes, and exact remaining
+owner inputs are in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
 
 ## Supabase beta checks
 
