@@ -49,4 +49,9 @@ below.
 - Notifications are visible and persisted in-app. Remote APNs push delivery is
   not enabled until the Apple Developer team, push entitlement, and APNs key are
   available.
+- The player map can request up to a 3,000-mile result set and displays only
+  neighborhood-rounded coordinates. Home recommendations remain local.
 - Android is out of scope for this TestFlight beta.
+
+Use [`BETA_TEST_PLAN.md`](BETA_TEST_PLAN.md) for the tester allocation,
+end-to-end acceptance runs, and proposed notification copy.

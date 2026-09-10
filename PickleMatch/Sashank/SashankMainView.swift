@@ -1796,6 +1796,7 @@ private struct NativeMapPlayerCluster: Identifiable {
 
 private struct NativeMapScreen: View {
     @EnvironmentObject private var app: AppState
+    @EnvironmentObject private var location: LocationService
     @State private var camera: MapCameraPosition = .region(.init(center: .init(latitude: 30.2672, longitude: -97.7431), span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
     @State private var gender: Gender?
     @State private var rating = "Any rating"
@@ -1808,7 +1809,8 @@ private struct NativeMapScreen: View {
     )
 
     private var players: [Player] {
-        app.players.filter { player in
+        let source = app.mapPlayers.isEmpty ? app.players : app.mapPlayers
+        return source.filter { player in
             guard player.profile(app.activeSport) != nil else { return false }
             guard audience != "Friends" || app.friendIds.contains(player.id) else { return false }
             guard gender == nil || player.gender == gender else { return false }
@@ -1828,10 +1830,12 @@ private struct NativeMapScreen: View {
     var body: some View {
         ZStack(alignment: .top) {
             Map(position: $camera, interactionModes: [.pan, .zoom]) {
-                Annotation("You", coordinate: .init(latitude: 30.2672, longitude: -97.7431)) {
-                    Circle().fill(MP.accent(app.activeSport)).frame(width: 16, height: 16)
-                        .overlay(Circle().stroke(.white, lineWidth: 3))
-                        .shadow(color: MP.accent(app.activeSport).opacity(0.3), radius: 8)
+                if let userCoordinate = location.location?.coordinate {
+                    Annotation("You", coordinate: userCoordinate) {
+                        Circle().fill(MP.accent(app.activeSport)).frame(width: 16, height: 16)
+                            .overlay(Circle().stroke(.white, lineWidth: 3))
+                            .shadow(color: MP.accent(app.activeSport).opacity(0.3), radius: 8)
+                    }
                 }
                 ForEach(playerClusters) { cluster in
                     Annotation(cluster.players.count == 1 ? cluster.players[0].name : "", coordinate: cluster.coordinate) {
@@ -1930,7 +1934,8 @@ private struct NativeMapScreen: View {
             VStack {
                 Spacer()
                 Button {
-                    camera = .region(.init(center: .init(latitude: 30.2672, longitude: -97.7431), span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
+                    let center = location.location?.coordinate ?? .init(latitude: 30.2672, longitude: -97.7431)
+                    camera = .region(.init(center: center, span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)))
                 } label: {
                     Image(systemName: "location.fill")
                         .font(.system(size: 18, weight: .bold))
@@ -1960,12 +1965,27 @@ private struct NativeMapScreen: View {
             if arguments.contains("-demo-map-filtered") { rating = "Under 80" }
 #endif
         }
+        .task(id: app.activeSport) {
+            await app.refreshMapPlayers()
+        }
+        .onReceive(location.$location.compactMap { $0 }) { value in
+            camera = .region(.init(
+                center: value.coordinate,
+                span: .init(latitudeDelta: 0.16, longitudeDelta: 0.16)
+            ))
+        }
     }
 
     private func coordinate(_ index: Int) -> CLLocationCoordinate2D {
+        let player = players[index]
+        if let latitude = player.approximateLatitude,
+           let longitude = player.approximateLongitude {
+            return .init(latitude: latitude, longitude: longitude)
+        }
         let offsets: [(Double, Double)] = [(-0.026,-0.034),(-0.023,-0.031),(-0.020,-0.028),(0.024,0.034),(-0.044,0.008),(0.008,-0.047),(0.047,0.004),(-0.005,0.052),(0.052,-0.038),(-0.052,-0.025)]
         let pair = offsets[index % offsets.count]
-        return .init(latitude: 30.2672 + pair.0, longitude: -97.7431 + pair.1)
+        let center = location.location?.coordinate ?? .init(latitude: 30.2672, longitude: -97.7431)
+        return .init(latitude: center.latitude + pair.0, longitude: center.longitude + pair.1)
     }
 
     private var playerClusters: [NativeMapPlayerCluster] {

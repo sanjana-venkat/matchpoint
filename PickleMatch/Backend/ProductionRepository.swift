@@ -27,6 +27,7 @@ protocol ProductionRepository: Sendable {
     func updateLocation(_ location: CLLocation) async throws
     func clearLocation() async throws
     func fetchCommunity(sport: Sport, radiusMiles: Double) async throws -> BackendCommunitySnapshot
+    func fetchMapPlayers(sport: Sport, radiusMiles: Double) async throws -> [Player]
     func fetchInbox() async throws -> BackendInboxSnapshot
     func fetchMatchbook() async throws -> BackendMatchbookSnapshot
     func syncDiscoveredCourts(_ courts: [DiscoveredCourt]) async throws
@@ -650,6 +651,18 @@ final class SupabaseProductionRepository: ProductionRepository, @unchecked Senda
             connectionIDsByPeer: connectionIDsByPeer,
             unreadNotificationCount: notifications.count
         )
+    }
+
+    func fetchMapPlayers(sport: Sport, radiusMiles: Double) async throws -> [Player] {
+        let rows: [NearbyPlayerRow] = try await client
+            .rpc("find_nearby_players", params: NearbyParameters(
+                sport: sport,
+                radius: min(max(radiusMiles, 1), 3_000),
+                limit: 500
+            ))
+            .execute()
+            .value
+        return rows.map(makePlayer)
     }
 
     func fetchInbox() async throws -> BackendInboxSnapshot {

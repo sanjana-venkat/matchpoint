@@ -29,6 +29,9 @@ final class AppState: ObservableObject {
 
     // MARK: Community
     @Published var players: [Player] = []
+    /// A wider, privacy-rounded discovery result used only by the zoomable map.
+    /// Keeping it separate prevents nationwide results from changing home recommendations.
+    @Published private(set) var mapPlayers: [Player] = []
     @Published var conversations: [Conversation] = []
     @Published var faceOffs: [FaceOff] = []
     @Published var groupFixtures: [GroupFixture] = []
@@ -67,6 +70,7 @@ final class AppState: ObservableObject {
         self.productionRepository = productionRepository
         self.courtDiscoveryService = courtDiscoveryService
         players = MockData.players()
+        mapPlayers = players
         conversations = MockData.conversations(players: players)
         faceOffs = MockData.faceOffs(players: players)
         matchHistory = MockData.matchHistory()
@@ -165,6 +169,7 @@ final class AppState: ObservableObject {
 
             // Never mix the real signed-in account with prototype community data.
             players = []
+            mapPlayers = []
             conversations = []
             faceOffs = []
             groupFixtures = []
@@ -224,6 +229,7 @@ final class AppState: ObservableObject {
         do {
             try await productionRepository.clearLocation()
             players = []
+            mapPlayers = []
             nearbyCommunities = []
         } catch {
             backendSyncError = error.localizedDescription
@@ -356,6 +362,21 @@ final class AppState: ObservableObject {
         }
     }
 
+    func refreshMapPlayers(radiusMiles: Double = 3_000) async {
+        guard let productionRepository, hydratedUserID != nil, activeSport.isAvailableInBeta else {
+            mapPlayers = players
+            return
+        }
+        do {
+            mapPlayers = try await productionRepository.fetchMapPlayers(
+                sport: activeSport,
+                radiusMiles: radiusMiles
+            )
+        } catch {
+            backendSyncError = error.localizedDescription
+        }
+    }
+
     func refreshInbox() async {
         guard let productionRepository, hydratedUserID != nil else { return }
         do {
@@ -434,11 +455,13 @@ final class AppState: ObservableObject {
         friendCountOverride = 0
         notificationsMarkedRead = false
         nearbyCommunities = MockData.nearbyCommunities()
+        mapPlayers = players
         hasCompletedOnboarding = false
     }
 
     func loadEstablishedPrototype() {
         players = MockData.players()
+        mapPlayers = players
         conversations = MockData.conversations(players: players)
         faceOffs = MockData.faceOffs(players: players)
         groupFixtures = []
@@ -615,6 +638,7 @@ final class AppState: ObservableObject {
     /// launched through the local onboarding preview route.
     private func seedOnboardingPreviewData() {
         players = MockData.players()
+        mapPlayers = players
         conversations = MockData.conversations(players: players)
         faceOffs = MockData.faceOffs(players: players)
         faceOffs.append(contentsOf: MockData.pendingVerifications(players: players))
