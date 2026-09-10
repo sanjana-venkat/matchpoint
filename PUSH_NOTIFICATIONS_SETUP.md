@@ -7,7 +7,7 @@ account-owner setup because the APNs private key is downloadable only once.
 ## 1. Enable the App ID
 
 In Apple Developer → Certificates, Identifiers & Profiles → Identifiers, create
-or open the explicit App ID `com.picklematch.PickleMatch` and enable **Push
+or open the explicit App ID `com.sashanksanjana.matchpoint` and enable **Push
 Notifications**. Keep Xcode automatic signing enabled and select the active team
 for the PickleMatch target.
 
@@ -28,7 +28,7 @@ Set these Edge Function secrets:
 - `APNS_PRIVATE_KEY`: complete contents of the downloaded `.p8`
 - `APNS_KEY_ID`: Apple key identifier
 - `APNS_TEAM_ID`: Apple developer team identifier
-- `APNS_TOPIC`: `com.picklematch.PickleMatch`
+- `APNS_TOPIC`: `com.sashanksanjana.matchpoint`
 - `PUSH_WEBHOOK_SECRET`: a random 32-byte secret
 
 ## 4. Connect notification inserts to APNs

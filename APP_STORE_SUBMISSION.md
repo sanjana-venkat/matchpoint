@@ -11,7 +11,7 @@ from the codebase.
 - Primary language: **English (U.S.)**
 - Version: **1.0**
 - Build: **1** (increment for every uploaded archive)
-- Bundle ID: **`com.picklematch.PickleMatch`** — confirmed for the beta
+- Bundle ID: **`com.sashanksanjana.matchpoint`** — confirmed for the beta
 - SKU: **`MATCHPOINT-IOS-001`**
 - Primary category: **Sports**
 - Secondary category: **Social Networking**

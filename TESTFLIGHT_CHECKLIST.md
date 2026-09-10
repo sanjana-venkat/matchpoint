@@ -9,7 +9,7 @@ below.
 - Apple Developer Program enrollment was submitted on September 10, 2026 and
   is currently **Pending**. Wait for activation and accept active agreements.
 - Create an App Store Connect app with the final bundle identifier. The current
-  development identifier is `com.picklematch.PickleMatch`.
+  development identifier is `com.sashanksanjana.matchpoint`.
 - Select the Apple development team in both the Match Point app and widget
   targets, then enable automatic signing.
 - Supply a public privacy-policy URL and support URL.

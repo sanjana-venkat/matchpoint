@@ -80,7 +80,7 @@ Deno.serve(async (request) => {
     }
 
     const jwt = await makeProviderToken();
-    const topic = Deno.env.get("APNS_TOPIC") ?? "com.picklematch.PickleMatch";
+    const topic = Deno.env.get("APNS_TOPIC") ?? "com.sashanksanjana.matchpoint";
     const copy = copyFor(notification, actor);
     let sent = 0;
 
