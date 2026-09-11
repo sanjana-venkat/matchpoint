@@ -337,5 +337,5 @@ private struct EmptyProfileParameters: Encodable, Sendable {}
 
 private enum ProfileRepositoryError: LocalizedError {
     case profileNotFound
-    var errorDescription: String? { "Your Match Point profile could not be loaded." }
+    var errorDescription: String? { "Your Matchpoint profile could not be loaded." }
 }

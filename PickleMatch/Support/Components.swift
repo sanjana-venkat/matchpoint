@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Match Point brand
+// MARK: - Matchpoint brand
 
 struct MatchPointLogo: View {
     var compact = false
@@ -31,7 +31,7 @@ struct MatchPointLogo: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Match Point")
+        .accessibilityLabel("Matchpoint")
     }
 }
 

@@ -38,7 +38,7 @@ struct RallyCheckbox: View {
     }
 }
 
-// MARK: - Rally visual system, adapted to Match Point's domain models
+// MARK: - Rally visual system, adapted to Matchpoint's domain models
 
 enum RallyPalette {
     /// White is the primary canvas and inverse text color. Warm neutrals are

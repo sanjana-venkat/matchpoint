@@ -1,4 +1,4 @@
-# Match Point — Sashank 8/17 Functional Parity Audit
+# Matchpoint — Sashank 8/17 Functional Parity Audit
 
 ## Authoritative baseline
 

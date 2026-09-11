@@ -1,4 +1,4 @@
-# Match Point external beta checklist
+# Matchpoint external beta checklist
 
 The codebase and Supabase project are ready for a small Pickleball/Badminton
 beta. Uploading to TestFlight still requires the account-owned Apple steps
@@ -7,7 +7,7 @@ below.
 ## Required from the app owner
 
 - Apple Developer Program membership is active.
-- The App Store Connect app exists as **Match Point: Play Nearby** (Apple ID
+- The App Store Connect app exists as **Matchpoint: Play Nearby** (Apple ID
   `6810871341`) with bundle identifier `com.sashanksanjana.matchpoint`.
 - The app and widget targets use Apple team `5GV64S6S7C`; Xcode still needs the
   account owner to sign in locally so automatic signing can create/download the

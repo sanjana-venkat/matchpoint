@@ -4149,7 +4149,7 @@ private struct NativeScoreSheet: View {
         VStack(spacing: 0) {
             Capsule().fill(MP.line).frame(width: 42, height: 5).padding(.top, 10)
             HStack {
-                VStack(alignment: .leading, spacing: 3) { Text("Upload scores").font(.system(size: 21, weight: .bold)); Text("Log a session played in or outside Match Point.").font(.system(size: 12)).foregroundStyle(MP.ink3) }
+                VStack(alignment: .leading, spacing: 3) { Text("Upload scores").font(.system(size: 21, weight: .bold)); Text("Log a session played in or outside Matchpoint.").font(.system(size: 12)).foregroundStyle(MP.ink3) }
                 Spacer(); Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 36, height: 36).background(MP.surface2, in: Circle()).overlay(Circle().stroke(MP.line)) }
             }
             .padding(20)

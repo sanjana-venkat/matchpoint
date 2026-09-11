@@ -136,7 +136,7 @@ struct RootView: View {
     private var backendLoadingView: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
-            ProgressView("Loading Match Point…")
+            ProgressView("Loading Matchpoint…")
                 .font(Theme.ui(14))
                 .tint(Theme.ink)
         }

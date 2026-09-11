@@ -32,7 +32,7 @@ const copyFor = (notification: NotificationRow, actor: string) => {
     case "rating_update":
     case "rating_updated": return { title: "Rating updated", body: "Your verified match changed your MP rating." };
     case "peer_review_received": return { title: "New peer review", body: "A player reviewed your recent match." };
-    default: return { title: "Match Point", body: "You have new activity." };
+    default: return { title: "Matchpoint", body: "You have new activity." };
   }
 };
 

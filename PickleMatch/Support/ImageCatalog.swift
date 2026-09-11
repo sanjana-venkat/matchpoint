@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-/// Stable visual keys supplied by the Match Point image package.
+/// Stable visual keys supplied by the Matchpoint image package.
 /// Local assets with the same key automatically take priority over the CDN.
 enum ImageCatalog {
     private static let remoteRoot =

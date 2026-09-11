@@ -1,7 +1,7 @@
 import CoreLocation
 import Foundation
 
-/// Requests a single coarse foreground location for nearby discovery. Match Point
+/// Requests a single coarse foreground location for nearby discovery. Matchpoint
 /// never tracks in the background and never exposes exact coordinates to peers.
 @MainActor
 final class LocationService: NSObject, ObservableObject, @preconcurrency CLLocationManagerDelegate {

@@ -52,7 +52,7 @@ struct MatchesView: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Your matchbook").font(Theme.heading(27))
-                Text("Scheduled in Match Point and uploaded after play.")
+                Text("Scheduled in Matchpoint and uploaded after play.")
                     .font(Theme.ui(12)).foregroundStyle(Theme.muted)
             }
             Spacer()
@@ -174,7 +174,7 @@ private struct MatchRecordQuickView: View {
             }
             detail("Date", record.date.formatted(date: .long, time: .shortened))
             detail("Venue", record.venue)
-            detail("Source", record.source == .unscheduled ? "Uploaded after play" : "Scheduled through Match Point")
+            detail("Source", record.source == .unscheduled ? "Uploaded after play" : "Scheduled through Matchpoint")
             if !record.gameScores.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Game results").font(Theme.ui(11, weight: .bold)).foregroundStyle(Theme.muted)

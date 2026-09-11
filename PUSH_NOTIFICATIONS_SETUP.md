@@ -1,4 +1,4 @@
-# Match Point push-notification setup
+# Matchpoint push-notification setup
 
 The iOS client, device-token RPC, delivery audit table, and `send-push` Edge
 Function are implemented. Apple credentials and one database webhook remain
@@ -13,7 +13,7 @@ for the PickleMatch target.
 
 ## 2. Create the APNs key
 
-In Apple Developer → Keys, create a key named `Match Point Push`, enable Apple
+In Apple Developer → Keys, create a key named `Matchpoint Push`, enable Apple
 Push Notifications service, and download the `.p8` file. Record the Key ID and
 Team ID. The file is downloadable only once.
 

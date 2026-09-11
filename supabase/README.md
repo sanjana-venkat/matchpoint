@@ -1,4 +1,4 @@
-# Match Point backend
+# Matchpoint backend
 
 This directory is the source of truth for the Supabase database. Never make a
 production-only schema change in the dashboard: add a migration here first.

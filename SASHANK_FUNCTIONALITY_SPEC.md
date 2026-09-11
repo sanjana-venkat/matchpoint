@@ -1,4 +1,4 @@
-# Match Point — Functional Inventory for the Next Redesign
+# Matchpoint — Functional Inventory for the Next Redesign
 
 **Purpose:** Preserve the complete product behavior while replacing the current visual style.
 
@@ -21,7 +21,7 @@ The redesign must not silently remove an implemented capability simply because i
 
 ## 2. Product foundation
 
-Match Point is a multi-sport social network for finding nearby players, coordinating availability, creating challenges, recording scores, verifying results, and building a sport-specific performance history.
+Matchpoint is a multi-sport social network for finding nearby players, coordinating availability, creating challenges, recording scores, verifying results, and building a sport-specific performance history.
 
 The core loop is:
 
@@ -49,7 +49,7 @@ Sport selection is limited to four sports per user. One sport is always the acti
 
 ### 2.2 Sport-specific behavior
 
-Individual sports use the Match Point numerical rating unless the user opts out. Group sports do not use a public numerical player rating; they use verified peer skill evaluations.
+Individual sports use the Matchpoint numerical rating unless the user opts out. Group sports do not use a public numerical player rating; they use verified peer skill evaluations.
 
 Peer skill categories are sport-specific:
 
@@ -189,7 +189,7 @@ Actual photo ingestion, camera capture, username uniqueness validation, and remo
 
 **Routed and interactive.**
 
-After profile creation, a short loading animation displays “Welcome to Match Point, [First Name]!” and prepares the home experience before onboarding completes.
+After profile creation, a short loading animation displays “Welcome to Matchpoint, [First Name]!” and prepares the home experience before onboarding completes.
 
 ## 5. Global application shell
 
@@ -397,7 +397,7 @@ Contains two segments:
 
 Past match behavior:
 
-- Combines scheduled Match Point matches with manually uploaded scores.
+- Combines scheduled Matchpoint matches with manually uploaded scores.
 - Filters records to the active sport.
 - Shows win/loss, opponent, score summary, rating change, date, venue, and record source.
 - Distinguishes “Uploaded score” from “Scheduled match.”
@@ -576,7 +576,7 @@ Any real-money or regulated wagering would require separate legal, safety, age, 
 
 **Routed at presentation level; full recording is implemented in shared modules.**
 
-- Supports matches played inside or outside Match Point.
+- Supports matches played inside or outside Matchpoint.
 - Supports Singles and Doubles.
 - Doubles includes partner selection and two-opponent selection.
 - Supports one through five matches/games in one session.

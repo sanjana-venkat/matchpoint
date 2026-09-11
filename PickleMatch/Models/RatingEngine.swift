@@ -1,6 +1,6 @@
 import Foundation
 
-/// Tunable constants for Match Point's uncertainty-aware, sport-specific rating system.
+/// Tunable constants for Matchpoint's uncertainty-aware, sport-specific rating system.
 /// The engine is deterministic: variation comes from matchup probability and confidence,
 /// never random noise.
 struct RatingConfiguration: Equatable, Sendable {

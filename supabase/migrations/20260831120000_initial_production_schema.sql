@@ -1,4 +1,4 @@
--- Match Point production schema.
+-- Matchpoint production schema.
 -- Client access is denied by default and opened deliberately through RLS.
 
 create extension if not exists pgcrypto;

@@ -266,7 +266,7 @@ private struct PeerRatingInfoSheet: View {
                     RallySportAssetIcon(sport: sport, size: 38)
                     Text("\(sport.title) peer ratings").font(Theme.heading(25))
                 }
-                Text("After a verified \(sport.title) game, teammates and opponents can score your sport-specific skills from one to five. Match Point shows each category's average and verified reviewer count; a single review never creates a public numerical player rating.")
+                Text("After a verified \(sport.title) game, teammates and opponents can score your sport-specific skills from one to five. Matchpoint shows each category's average and verified reviewer count; a single review never creates a public numerical player rating.")
                     .font(Theme.ui(13)).foregroundStyle(Theme.muted).lineSpacing(4)
                 ForEach(sport.skillCategories, id: \.self) { category in
                     Label(category, systemImage: "star.fill")
@@ -832,7 +832,7 @@ private struct WelcomeLoadingView: View {
                     .frame(width: 74, height: 74)
                     .rotationEffect(.degrees(animate ? 360 : 0))
             }
-            Text("Welcome to Match Point, \(name.split(separator: " ").first.map(String.init) ?? "Player")!")
+            Text("Welcome to Matchpoint, \(name.split(separator: " ").first.map(String.init) ?? "Player")!")
                 .font(Theme.heading(25))
                 .multilineTextAlignment(.center)
             Text("Preparing your home court…")

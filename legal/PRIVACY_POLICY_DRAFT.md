@@ -1,4 +1,4 @@
-# Match Point Privacy Policy — draft
+# Matchpoint Privacy Policy — draft
 
 **Effective date:** September 10, 2026
 
@@ -6,10 +6,10 @@ This draft must be reviewed and completed before publication. Replace every
 bracketed placeholder and have the final policy reviewed for the jurisdictions
 where the beta will operate.
 
-Match Point ("Match Point," "we," "us," or "our") helps people discover sports
+Matchpoint ("Matchpoint," "we," "us," or "our") helps people discover sports
 partners, communicate, arrange matches, record results, and participate in local
 sports communities. This policy explains how we collect, use, disclose, and
-protect information when you use the Match Point mobile application.
+protect information when you use the Matchpoint mobile application.
 
 ## Information we collect
 
@@ -48,7 +48,7 @@ We use information to:
 - show nearby courts, clubs, and groups;
 - deliver service notifications and, with permission, push notifications;
 - investigate reports, enforce community rules, prevent abuse, and protect users;
-- operate, troubleshoot, and improve Match Point; and
+- operate, troubleshoot, and improve Matchpoint; and
 - comply with legal obligations.
 
 We do not sell personal information and do not use it for cross-app advertising
@@ -57,11 +57,11 @@ tracking.
 ## How information is shared
 
 Profile information, approximate location, sports, ratings, availability, match
-history, and community participation may be visible to other Match Point users
+history, and community participation may be visible to other Matchpoint users
 as described in the app. Messages are shared with their intended participants.
 Reports may be reviewed by authorized safety personnel.
 
-We use service providers to operate Match Point, including Supabase for
+We use service providers to operate Matchpoint, including Supabase for
 authentication, database, realtime, and backend infrastructure and Apple
 services for maps, device capabilities, and app distribution. Providers process
 information on our behalf under their applicable terms.
@@ -73,7 +73,7 @@ or in connection with a business transaction such as a merger or acquisition.
 
 We retain information while your account is active and as reasonably necessary
 to provide the service, maintain security and rating integrity, resolve disputes,
-and meet legal obligations. You can request account deletion inside Match Point.
+and meet legal obligations. You can request account deletion inside Matchpoint.
 Deletion may not immediately remove information that must be retained for fraud
 prevention, legal compliance, dispute resolution, or de-identified service
 records.
@@ -90,7 +90,7 @@ applicable right.
 
 ## Children
 
-Match Point is not directed to children under 13, and the app requires users to
+Matchpoint is not directed to children under 13, and the app requires users to
 state that they are at least 13. If we learn that an ineligible child provided
 personal information, we will take appropriate steps to remove it.
 
@@ -101,13 +101,13 @@ protect information. No online service can guarantee absolute security.
 
 ## International users
 
-Match Point and its providers may process information in countries other than
+Matchpoint and its providers may process information in countries other than
 the country where you live. Where required, we use appropriate safeguards for
 international transfers.
 
 ## Changes to this policy
 
-We may update this policy as Match Point changes. We will update the effective
+We may update this policy as Matchpoint changes. We will update the effective
 date and provide additional notice when legally required.
 
 ## Contact us

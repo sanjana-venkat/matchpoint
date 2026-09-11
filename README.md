@@ -1,10 +1,10 @@
-# Match Point — SwiftUI iOS App
+# Matchpoint — SwiftUI iOS App
 
 For the complete behavior-preservation inventory used for redesign work, see [`SASHANK_FUNCTIONALITY_SPEC.md`](SASHANK_FUNCTIONALITY_SPEC.md).
 
 A SwiftUI sports matchmaking app with onboarding, player discovery, chats, challenges, score verification, per-sport Elo ratings, nearby courts and clubs, and a Supabase backend. The current beta focuses on **Pickleball** and **Badminton**; the remaining sports are visible as coming soon.
 
-Public pages: [Match Point](https://website-mu-ivory-jxjijloosj.vercel.app/), [Privacy](https://website-mu-ivory-jxjijloosj.vercel.app/privacy/), and [Support](https://website-mu-ivory-jxjijloosj.vercel.app/support/).
+Public pages: [Matchpoint](https://website-mu-ivory-jxjijloosj.vercel.app/), [Privacy](https://website-mu-ivory-jxjijloosj.vercel.app/privacy/), and [Support](https://website-mu-ivory-jxjijloosj.vercel.app/support/).
 
 ## Fastest way to preview it (no account or API keys)
 

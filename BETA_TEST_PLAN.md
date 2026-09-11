@@ -1,4 +1,4 @@
-# Match Point 20-person beta plan
+# Matchpoint 20-person beta plan
 
 ## Current testable scope
 

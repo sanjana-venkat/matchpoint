@@ -1,4 +1,4 @@
--- Match Point rating engine v2: deterministic uncertainty-aware updates.
+-- Matchpoint rating engine v2: deterministic uncertainty-aware updates.
 -- Competitive ratings are sport-specific and are settled only inside one DB transaction.
 
 begin;

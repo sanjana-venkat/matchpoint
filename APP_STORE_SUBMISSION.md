@@ -1,4 +1,4 @@
-# Match Point App Store submission pack
+# Matchpoint App Store submission pack
 
 This document is the working source for the first external TestFlight beta and
 eventual App Store submission. Fields marked **OWNER INPUT** cannot be completed
@@ -6,8 +6,8 @@ from the codebase.
 
 ## App identity
 
-- App Store listing name: **Match Point: Play Nearby**
-- Installed display name: **Match Point**
+- App Store listing name: **Matchpoint: Play Nearby**
+- Installed display name: **Matchpoint**
 - App Store Connect Apple ID: **6810871341**
 - Platform: **iOS**
 - Primary language: **English (U.S.)**
@@ -33,7 +33,7 @@ build your local sports community.
 
 ### Description
 
-Match Point helps pickleball and badminton players turn “we should play” into a
+Matchpoint helps pickleball and badminton players turn “we should play” into a
 real match.
 
 Discover players near you or explore another area on the map. Compare
@@ -45,7 +45,7 @@ After the match, record each game and ask the other player to verify the result.
 Verified results update each player’s rating and make future matches easier to
 balance.
 
-With Match Point you can:
+With Matchpoint you can:
 
 • Discover pickleball and badminton players
 • Explore privacy-conscious approximate player locations
@@ -70,7 +70,7 @@ pickleball,badminton,sports,matchmaking,players,courts,matches,rating,clubs,loca
 
 ### What’s New
 
-Welcome to the first Match Point beta: discover players, connect and chat,
+Welcome to the first Matchpoint beta: discover players, connect and chat,
 schedule matches, verify scores, and build separate pickleball and badminton
 ratings.
 
@@ -88,7 +88,7 @@ published at public HTTPS URLs before submission.
 
 ## App icon and screenshots
 
-- The supplied Match Point artwork is installed as the 1024 × 1024 app icon.
+- The supplied Matchpoint artwork is installed as the 1024 × 1024 app icon.
 - Do not pre-round the icon or add transparent corners.
 - Capture final screenshots from the production-signed UI after the icon,
   display name, and production backend are confirmed.
@@ -116,9 +116,9 @@ is **not used for tracking** unless noted otherwise.
 | Name | Player profile and social features |
 | User ID | Authentication, ownership, security, and account relationships |
 | Precise Location | Nearby discovery and court search; stored privately |
-| Contacts | Match Point friendship and connection graph; not the device address book |
+| Contacts | Matchpoint friendship and connection graph; not the device address book |
 | Other User Content | Profile biography, username, availability, challenges, scores, reviews, reports, clubs, and groups |
-| Emails or Text Messages | Direct-message content sent inside Match Point |
+| Emails or Text Messages | Direct-message content sent inside Matchpoint |
 | Device ID | APNs device token used to route push notifications |
 | Other Data | Age, gender, and other player-profile fields |
 
@@ -134,7 +134,7 @@ upload.
 - Onboarding currently enforces a minimum age of 13.
 - Answer the questionnaire truthfully for unrestricted web/social communication,
   user-generated content, location sharing, and moderation controls.
-- Match Point includes direct messages, profiles, block, and report controls.
+- Matchpoint includes direct messages, profiles, block, and report controls.
 - The app does not implement real-money wagering or gambling. Any social wager
   language must remain non-cash and optional for this beta.
 - Use Apple’s calculated rating unless legal review or the final Terms require a
@@ -142,7 +142,7 @@ upload.
 
 ## App Review notes
 
-Match Point is a sports matchmaking app for pickleball and badminton. Reviewers
+Matchpoint is a sports matchmaking app for pickleball and badminton. Reviewers
 can create an account with email/password, but a pre-confirmed review account is
 recommended so they can reach populated production flows without waiting for an
 email.

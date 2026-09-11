@@ -530,7 +530,7 @@ struct AvailabilityCoordinationSheet: View {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Find the overlap")
                             .font(Theme.heading(28))
-                        Text("Everyone owns their schedule. Match Point only highlights windows shared by the whole group.")
+                        Text("Everyone owns their schedule. Matchpoint only highlights windows shared by the whole group.")
                             .font(Theme.ui(13))
                             .foregroundStyle(Theme.muted)
                             .lineSpacing(3)
