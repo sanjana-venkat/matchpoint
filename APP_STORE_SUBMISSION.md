@@ -18,18 +18,18 @@ from the codebase.
 - Primary category: **Sports**
 - Secondary category: **Social Networking**
 - Price: **Free** for the beta
-- Copyright: **2026 [OWNER LEGAL NAME]** — **OWNER INPUT**
+- Copyright: **2026 Sanjana Venkat**
 
 ## Localized product-page copy
 
 ### Subtitle
 
-Find players. Play more.
+Play nearby. Compete. Connect.
 
 ### Promotional text
 
-Find nearby pickleball and badminton players, arrange a match, record the
-result, and build a verified sport-specific rating.
+Find nearby pickleball and badminton players, plan matches, verify results, and
+build your local sports community.
 
 ### Description
 
@@ -66,7 +66,7 @@ neighborhood location.
 
 ### Keywords
 
-pickleball,badminton,players,matches,courts,clubs,rating,Elo,sports,local,partner
+pickleball,badminton,sports,matchmaking,players,courts,matches,rating,clubs,local
 
 ### What’s New
 
@@ -116,9 +116,11 @@ is **not used for tracking** unless noted otherwise.
 | Name | Player profile and social features |
 | User ID | Authentication, ownership, security, and account relationships |
 | Precise Location | Nearby discovery and court search; stored privately |
-| Coarse Location | Neighborhood-rounded map discovery shown to other players |
+| Contacts | Match Point friendship and connection graph; not the device address book |
 | Other User Content | Profile biography, username, availability, challenges, scores, reviews, reports, clubs, and groups |
 | Emails or Text Messages | Direct-message content sent inside Match Point |
+| Device ID | APNs device token used to route push notifications |
+| Other Data | Age, gender, and other player-profile fields |
 
 Do **not** declare advertising, cross-app tracking, contacts/address-book access,
 health data, payment information, or diagnostics unless those capabilities are
@@ -174,14 +176,30 @@ declaration from this draft alone.
 
 ## Information still needed from the owner
 
-1. Final app icon verification in an archive (artwork supplied September 10,
-   2026).
-2. Public copyright/legal seller name.
-3. App Review contact name, phone number, and email.
-4. A dedicated pre-confirmed App Review account.
-5. APNs Team ID and Key ID after push capability is enabled. Keep the `.p8`
-   private key out of Git and chat; store it only as a Supabase secret.
-6. Two physical iPhones and two separate test accounts for the first end-to-end
-    production smoke test.
+1. Final app icon verification in a signed archive (artwork supplied September
+   10, 2026).
+2. App Review contact phone number.
+3. A dedicated pre-confirmed App Review account and password.
+4. Owner confirmation of the App Privacy publishing attestation in App Store
+   Connect. The answers are complete but intentionally not published by an
+   automated agent.
+5. Owner completion of the age-rating and content-rights declarations.
+6. Final App Store screenshots.
+7. Two physical iPhones and two separate test accounts for the first end-to-end
+   production APNs and multiplayer smoke test.
+
+## Push notification production configuration
+
+- App ID: **`com.sashanksanjana.matchpoint`** with Push Notifications enabled
+- Apple Team ID: **`5GV64S6S7C`**
+- Active APNs Key ID: **`WNVU9X6P88`** (team-scoped, sandbox and production)
+- Supabase Edge Function: **`send-push`**
+- Database webhook: **`dispatch_notification_push`** on
+  `public.notifications` inserts
+- APNs credentials and the webhook secret are stored as Supabase secrets and
+  are not committed to Git.
+- The authenticated webhook health check returns HTTP 200. Final delivery still
+  requires a production-signed build on a physical iPhone so APNs can issue and
+  register a real device token.
 
 Support email: **matchpoint.app.support@gmail.com**

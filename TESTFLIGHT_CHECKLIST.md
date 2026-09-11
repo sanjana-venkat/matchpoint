@@ -6,18 +6,18 @@ below.
 
 ## Required from the app owner
 
-- Apple Developer Program enrollment was submitted on September 10, 2026 and
-  is currently **Pending**. Wait for activation and accept active agreements.
-- Create an App Store Connect app with the final bundle identifier. The current
-  development identifier is `com.sashanksanjana.matchpoint`.
-- Select the Apple development team in both the Match Point app and widget
-  targets, then enable automatic signing.
-- Supply a public privacy-policy URL and support URL.
-- Finish App Store privacy answers. The app stores account/profile data,
-  precise location for nearby discovery, messages, connections, memberships,
-  challenges, scores, and rating history. It does not use this data for tracking.
-- Add final App Store screenshots, description, age rating, category, and app
-  review contact details.
+- Apple Developer Program membership is active.
+- The App Store Connect app exists as **Match Point: Play Nearby** (Apple ID
+  `6810871341`) with bundle identifier `com.sashanksanjana.matchpoint`.
+- The app and widget targets use Apple team `5GV64S6S7C`; Xcode still needs the
+  account owner to sign in locally so automatic signing can create/download the
+  distribution profiles.
+- Public privacy, support, and marketing URLs are live on Vercel.
+- App Store metadata, categories, TestFlight description, and App Privacy
+  answers are filled in. The owner must publish the privacy answers because the
+  final action includes a legal accuracy attestation.
+- Add final App Store screenshots, complete age rating and content rights, and
+  add the App Review phone number and review-account credentials.
 
 The drafted listing copy, privacy answers, review notes, and exact remaining
 owner inputs are in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
@@ -50,9 +50,11 @@ owner inputs are in [`APP_STORE_SUBMISSION.md`](APP_STORE_SUBMISSION.md).
   remain visible only as “Coming soon.”
 - Nearby courts use Apple Maps search and are cached in Supabase. Search results
   depend on Apple Maps coverage and location permission.
-- Notifications are visible and persisted in-app. Remote APNs push delivery is
-  not enabled until the Apple Developer team, push entitlement, and APNs key are
-  available.
+- Notifications are visible and persisted in-app. Remote APNs infrastructure is
+  configured: the app registers device tokens, Supabase stores them, a database
+  webhook invokes `send-push`, and the Edge Function is configured with the
+  active APNs key. Real delivery must still be smoke-tested using a signed build
+  on physical iPhones.
 - The player map can request up to a 3,000-mile result set and displays only
   neighborhood-rounded coordinates. Home recommendations remain local.
 - Android is out of scope for this TestFlight beta.
